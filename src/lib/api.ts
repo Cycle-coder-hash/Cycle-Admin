@@ -716,6 +716,8 @@ export interface PaymentSettingsConfig {
   rocket: PaymentGatewayConfig;
   announcement?: string;
   announcementActive?: boolean;
+  studentTelegramUrl?: string;
+  studentTelegramDescription?: string;
 }
 
 export const defaultPaymentConfig: PaymentSettingsConfig = {
@@ -739,6 +741,8 @@ export const defaultPaymentConfig: PaymentSettingsConfig = {
   },
   announcement: "Special Institutional Discount 50% Active on All Packages!",
   announcementActive: true,
+  studentTelegramUrl: "https://t.me/cycleofchart",
+  studentTelegramDescription: "Official Cycle of Chart VIP Student Telegram Channel & Group",
 };
 
 export async function fetchPaymentSettingsApi(): Promise<PaymentSettingsConfig> {
@@ -781,7 +785,7 @@ export async function fetchPaymentSettingsApi(): Promise<PaymentSettingsConfig> 
 
   // Fallback to individual keys if payment_gateways_config does not exist yet
   try {
-    const res = await supaFetch("settings?key=in.(bkash,nagad,rocket,announcement)&select=key,value");
+    const res = await supaFetch("settings?key=in.(bkash,nagad,rocket,announcement,student_telegram_url)&select=key,value");
     if (res.ok) {
       const rows = await res.json();
       if (Array.isArray(rows) && rows.length > 0) {

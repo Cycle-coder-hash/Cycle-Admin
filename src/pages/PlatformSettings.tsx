@@ -11,6 +11,8 @@ import {
   CreditCard,
   Sliders,
   CheckCircle2,
+  Send,
+  ExternalLink,
 } from "lucide-react";
 import { BkashLogo, NagadLogo, RocketLogo } from "../components/PaymentIcons";
 import { PaymentSettingsConfig, defaultPaymentConfig } from "../lib/api";
@@ -34,6 +36,8 @@ export const PlatformSettings: React.FC<PlatformSettingsProps> = ({
     rocket: { ...defaultPaymentConfig.rocket, ...(config?.rocket || {}) },
     announcement: config?.announcement ?? defaultPaymentConfig.announcement,
     announcementActive: config?.announcementActive !== false,
+    studentTelegramUrl: config?.studentTelegramUrl ?? defaultPaymentConfig.studentTelegramUrl,
+    studentTelegramDescription: config?.studentTelegramDescription ?? defaultPaymentConfig.studentTelegramDescription,
   });
 
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -48,6 +52,8 @@ export const PlatformSettings: React.FC<PlatformSettingsProps> = ({
         rocket: { ...defaultPaymentConfig.rocket, ...(config.rocket || {}) },
         announcement: config.announcement ?? defaultPaymentConfig.announcement,
         announcementActive: config.announcementActive !== false,
+        studentTelegramUrl: config.studentTelegramUrl ?? defaultPaymentConfig.studentTelegramUrl,
+        studentTelegramDescription: config.studentTelegramDescription ?? defaultPaymentConfig.studentTelegramDescription,
       });
     }
   }, [config]);
@@ -603,6 +609,112 @@ export const PlatformSettings: React.FC<PlatformSettingsProps> = ({
             </div>
           </div>
 
+          {/* VIP Student Private Telegram Community Link Card */}
+          <div className="rounded-3xl border border-sky-500/30 bg-gradient-to-br from-sky-950/40 via-[#070e1b] to-blue-950/20 p-6 space-y-5 relative overflow-hidden shadow-xl shadow-sky-950/30">
+            <div className="absolute -top-12 -right-12 w-48 h-48 bg-sky-500/10 rounded-full blur-2xl pointer-events-none" />
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800/80">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/25 shrink-0">
+                  <Send size={22} className="translate-x-0.5 -translate-y-0.5" />
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-base font-black text-white">
+                      VIP Student Private Telegram Link
+                    </h3>
+                    <span className="rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider">
+                      Paid Students Only
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    শুধুমাত্র ভেরিফাইড পেইড স্টুডেন্টদের ড্যাশবোর্ডে এবং পপআপে এই প্রাইভেট টেলিগ্রাম লিংক শো করবে।
+                  </p>
+                </div>
+              </div>
+
+              {form.studentTelegramUrl && (
+                <a
+                  href={form.studentTelegramUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1.5 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-bold text-sky-400 hover:bg-sky-500/20 transition shrink-0"
+                >
+                  <ExternalLink size={13} />
+                  <span>Test Link</span>
+                </a>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-300">
+                  Private Telegram Channel / Group Invite Link *
+                </label>
+                <div className="relative mt-1.5">
+                  <input
+                    type="url"
+                    required
+                    value={form.studentTelegramUrl || ""}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        studentTelegramUrl: e.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-sky-500/40 bg-slate-900/90 p-3 font-mono text-sm font-bold text-white outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 transition pr-20"
+                    placeholder="https://t.me/+joinchat_... or https://t.me/cycleofchart"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(form.studentTelegramUrl || "", "telegram")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg bg-slate-800 px-2.5 py-1 text-[11px] font-bold text-slate-300 hover:text-white transition"
+                  >
+                    {copiedKey === "telegram" ? (
+                      <span className="flex items-center gap-1 text-emerald-400">
+                        <Check size={12} /> Copied
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1">
+                        <Copy size={12} /> Copy
+                      </span>
+                    )}
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  পেইড স্টুডেন্ট পেমেন্ট এপ্রুভ হওয়ার পর পপআপে "Join VIP Telegram" বাটনে ক্লিক করলে সরাসরি এই লিংকে যাবে।
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300">
+                  Community Description / Welcome Note
+                </label>
+                <input
+                  type="text"
+                  value={form.studentTelegramDescription || ""}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      studentTelegramDescription: e.target.value,
+                    }))
+                  }
+                  className="mt-1.5 w-full rounded-xl border border-slate-800 bg-slate-900/90 p-2.5 text-xs text-white outline-none focus:border-sky-500 transition"
+                  placeholder="Official Cycle of Chart VIP Student Telegram Channel & Group"
+                />
+              </div>
+
+              {/* Security Shield Note */}
+              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-3.5 flex items-start gap-2.5 text-xs text-slate-300">
+                <ShieldCheck size={16} className="text-emerald-400 shrink-0 mt-0.5" />
+                <div className="leading-relaxed">
+                  <span className="font-bold text-emerald-400">Strict Student Protection Active: </span>
+                  ফ্রি ইবুক ডাউনলোডকারী বা পেন্ডিং অর্ডার থাকা সাধারণ ভিজিটররা এই লিংক কখনো দেখতে পাবে না। শুধুমাত্র এডমিন যখন অর্ডার ভেরিফাই ও এপ্রুভ করবেন, তখনই স্টুডেন্ট এই লিংকে জয়েন করার সুযোগ পাবে।
+                </div>
+              </div>
+            </div>
+          </div>
+
           <button
             type="submit"
             disabled={isSaving}
@@ -774,6 +886,34 @@ export const PlatformSettings: React.FC<PlatformSettingsProps> = ({
                 256-Bit SSL Encrypted
               </span>
               <span>100% Manual Verification</span>
+            </div>
+          </div>
+
+          {/* Live Student VIP Telegram Popup Preview */}
+          <div className="rounded-3xl border border-sky-500/30 bg-[#070e1b] p-5 shadow-2xl space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-sky-400 flex items-center gap-1.5">
+                <Send size={13} />
+                Paid Student VIP Modal Preview
+              </span>
+              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                Auto-Triggered
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Once an order is marked <span className="text-emerald-400 font-bold">Approved</span>, the student sees:
+            </p>
+            <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3 space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-white">
+                <span>🎓 VIP Student Community</span>
+                <span className="text-[10px] text-sky-400 font-mono">#COC-STUDENT</span>
+              </div>
+              <div className="text-[11px] text-slate-400 truncate">
+                Target Link: <span className="text-sky-300 font-mono">{form.studentTelegramUrl || "Not configured"}</span>
+              </div>
+              <div className="w-full py-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-slate-950 text-xs font-black text-center shadow-md">
+                🚀 Join VIP Telegram Community
+              </div>
             </div>
           </div>
         </div>
