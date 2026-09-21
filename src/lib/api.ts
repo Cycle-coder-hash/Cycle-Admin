@@ -412,11 +412,31 @@ export async function fetchAdminEbooks(): Promise<any[]> {
 }
 
 export async function createEbookApi(payload: any) {
+  let finalPayload = { ...payload };
+
+  // Guard against Base64 bloat: If fileUrl is raw base64, auto-upload to cloud storage
+  if (finalPayload.fileUrl && typeof finalPayload.fileUrl === "string" && finalPayload.fileUrl.startsWith("data:")) {
+    try {
+      const cleanBase64 = finalPayload.fileUrl.replace(/^data:[a-zA-Z0-9/+-]+;base64,/, "");
+      const byteCharacters = atob(cleanBase64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: "application/pdf" });
+      const syntheticFile = new File([blob], finalPayload.fileName || "document.pdf", { type: "application/pdf" });
+      finalPayload.fileUrl = await uploadPdfToFreeStorage(syntheticFile);
+    } catch (guardErr) {
+      console.warn("[Auto-upload PDF Base64 interceptor notice]:", guardErr);
+    }
+  }
+
   try {
     const res = await fetch(`${API_BASE}/ebooks`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(finalPayload),
     });
     if (res.ok) {
       const data = await res.json();
@@ -427,14 +447,14 @@ export async function createEbookApi(payload: any) {
   }
 
   const existingRes = await supaFetch("settings?key=eq.free_ebooks&select=value");
-  let existing: any[] = [];
+  let existing = [];
   if (existingRes.ok) {
     const rows = await existingRes.json();
     if (rows && rows[0]?.value) existing = JSON.parse(rows[0].value);
   }
   const newEbook = {
     id: Date.now(),
-    ...payload,
+    ...finalPayload,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -448,11 +468,31 @@ export async function createEbookApi(payload: any) {
 }
 
 export async function updateEbookApi(id: number, payload: any) {
+  let finalPayload = { ...payload };
+
+  // Guard against Base64 bloat: If fileUrl is raw base64, auto-upload to cloud storage
+  if (finalPayload.fileUrl && typeof finalPayload.fileUrl === "string" && finalPayload.fileUrl.startsWith("data:")) {
+    try {
+      const cleanBase64 = finalPayload.fileUrl.replace(/^data:[a-zA-Z0-9/+-]+;base64,/, "");
+      const byteCharacters = atob(cleanBase64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: "application/pdf" });
+      const syntheticFile = new File([blob], finalPayload.fileName || "document.pdf", { type: "application/pdf" });
+      finalPayload.fileUrl = await uploadPdfToFreeStorage(syntheticFile);
+    } catch (guardErr) {
+      console.warn("[Auto-upload PDF Base64 interceptor notice]:", guardErr);
+    }
+  }
+
   try {
     const res = await fetch(`${API_BASE}/ebooks/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(finalPayload),
     });
     if (res.ok) {
       const data = await res.json();
@@ -463,14 +503,14 @@ export async function updateEbookApi(id: number, payload: any) {
   }
 
   const existingRes = await supaFetch("settings?key=eq.free_ebooks&select=value");
-  let existing: any[] = [];
+  let existing = [];
   if (existingRes.ok) {
     const rows = await existingRes.json();
     if (rows && rows[0]?.value) existing = JSON.parse(rows[0].value);
   }
-  const idx = existing.findIndex((e) => e.id === id);
+  const idx = existing.findIndex((e: any) => e.id === id);
   if (idx !== -1) {
-    existing[idx] = { ...existing[idx], ...payload, updatedAt: new Date().toISOString() };
+    existing[idx] = { ...existing[idx], ...finalPayload, updatedAt: new Date().toISOString() };
     await supaFetch("settings", {
       method: "POST",
       headers: { "Prefer": "resolution=merge-duplicates" },
@@ -478,7 +518,7 @@ export async function updateEbookApi(id: number, payload: any) {
     });
     return existing[idx];
   }
-  return { id, ...payload };
+  return { id, ...finalPayload };
 }
 
 export async function deleteEbookApi(id: number) {
@@ -508,6 +548,69 @@ export async function deleteEbookApi(id: number) {
     }
   }
   return { success: true };
+}
+
+
+/**
+ * Upload a PDF file directly to Free Cloud Storage (Supabase Storage "ebooks" or Free Cloud CDN fallback).
+ *
+ * This guarantees that heavy PDF Base64 binaries are NEVER stored in PostgreSQL or Supabase database rows.
+ * Only the lightweight public HTTPS URL is returned to be stored in the database.
+ */
+export async function uploadPdfToFreeStorage(file: File): Promise<string> {
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const uniqueName = `${Date.now()}_${safeName}`;
+
+  // 1. Try Supabase Storage "ebooks" bucket first (1GB Free Storage)
+  try {
+    const supaRes = await fetch(`https://pxrcaqmjmsvldhiyuacx.supabase.co/storage/v1/object/ebooks/${uniqueName}`, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`,
+        "Content-Type": file.type || "application/pdf",
+      },
+      body: file,
+    });
+
+    if (supaRes.ok) {
+      return `https://pxrcaqmjmsvldhiyuacx.supabase.co/storage/v1/object/public/ebooks/${uniqueName}`;
+    }
+  } catch (supaErr) {
+    console.warn("[Direct Supabase Storage upload error, falling back to Free Cloud CDN]:", supaErr);
+  }
+
+  // 2. Try Backend Cloud CDN endpoint (/api/upload/file)
+  try {
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const apiRoot = rawApiUrl.replace(/\/api\/admin\/?$/, "");
+    const res = await fetch(`${apiRoot}/api/upload/file`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        base64,
+        filename: safeName,
+        contentType: file.type || "application/pdf",
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.url && typeof data.url === "string" && data.url.startsWith("http")) {
+        return data.url;
+      }
+    }
+  } catch (apiErr) {
+    console.warn("[Backend upload proxy notice]:", apiErr);
+  }
+
+  throw new Error("Unable to upload PDF to free cloud storage. Please check your internet connection or paste an external public link.");
 }
 
 export async function uploadImageToImgbb(base64Data: string): Promise<string> {

@@ -29,6 +29,7 @@ import {
   updateEbookApi,
   deleteEbookApi,
   updateOwnerProfileApi,
+  uploadPdfToFreeStorage,
   PaymentSettingsConfig,
   defaultPaymentConfig,
   fetchPaymentSettingsApi,
@@ -100,6 +101,7 @@ export const App: React.FC = () => {
   const [editingEbook, setEditingEbook] = useState<any | null>(null);
   const [ebookForm, setEbookForm] = useState<EbookFormData>(initialEbookForm);
   const [isSavingEbook, setIsSavingEbook] = useState(false);
+  const [isUploadingPdf, setIsUploadingPdf] = useState(false);
   const [deleteConfirmEbookId, setDeleteConfirmEbookId] = useState<number | null>(null);
   const [isDeletingEbook, setIsDeletingEbook] = useState(false);
 
@@ -289,7 +291,7 @@ export const App: React.FC = () => {
     }
   };
 
-  const handlePdfUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.type !== "application/pdf" && !file.name.endsWith(".pdf")) {
@@ -297,16 +299,21 @@ export const App: React.FC = () => {
       return;
     }
     const sizeInMb = (file.size / (1024 * 1024)).toFixed(1) + " MB";
-    const reader = new FileReader();
-    reader.onload = () => {
+    try {
+      setIsUploadingPdf(true);
+      const cdnUrl = await uploadPdfToFreeStorage(file);
       setEbookForm((prev) => ({
         ...prev,
-        fileUrl: reader.result as string,
+        fileUrl: cdnUrl,
         fileName: file.name,
         fileSize: sizeInMb,
       }));
-    };
-    reader.readAsDataURL(file);
+    } catch (err: any) {
+      alert("Failed to upload PDF: " + (err.message || err));
+    } finally {
+      setIsUploadingPdf(false);
+      e.target.value = "";
+    }
   };
 
   const handleDeleteEbookConfirm = async (id: number) => {
@@ -473,6 +480,7 @@ export const App: React.FC = () => {
         onSave={handleSaveEbook}
         onPdfUpload={handlePdfUpload}
         isSaving={isSavingEbook}
+        isUploadingPdf={isUploadingPdf}
       />
 
       {/* eBook Delete Confirmation Modal */}
