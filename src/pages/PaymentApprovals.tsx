@@ -1,17 +1,19 @@
 import React, { useState } from "react";
-import { Check, X, Search, Copy, CheckCircle2, FileCheck2 } from "lucide-react";
+import { Check, X, Search, Copy, CheckCircle2, FileCheck2, Trash2 } from "lucide-react";
 import { Order } from "../lib/types";
 
 interface PaymentApprovalsProps {
   orders: Order[];
   onApprove: (orderId: number) => void;
   onReject: (orderId: number, reason: string) => void;
+  onDelete?: (orderId: number) => void;
 }
 
 export const PaymentApprovals: React.FC<PaymentApprovalsProps> = ({
   orders,
   onApprove,
   onReject,
+  onDelete,
 }) => {
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
   const [search, setSearch] = useState("");
@@ -194,6 +196,18 @@ export const PaymentApprovals: React.FC<PaymentApprovalsProps> = ({
                         <span>Verified & Granted</span>
                       </div>
                     )}
+
+                    {onDelete && (
+                      <button
+                        onClick={() => onDelete(o.id)}
+                        className="flex items-center gap-1.5 rounded-xl border border-rose-900/60 bg-rose-950/30 px-3 py-2 text-xs font-bold text-rose-400 hover:bg-rose-900/60 hover:text-rose-200 transition"
+                        title="Delete order from database"
+                      >
+                        <Trash2 size={14} />
+                        <span>Delete</span>
+                      </button>
+                    )}
+
                   </div>
                 </div>
               </div>

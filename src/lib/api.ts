@@ -270,6 +270,42 @@ export async function rejectOrderApi(orderId: number, reason: string) {
   }
 }
 
+
+export async function deleteOrderApi(orderId: number) {
+  try {
+    const res = await fetch(`${API_BASE}/delete-order`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) return data;
+    }
+  } catch (err) {
+    console.warn("[deleteOrderApi primary failed, trying Supabase direct]:", err);
+  }
+
+  // Supabase direct delete
+  try {
+    try {
+      await supaFetch(`entitlements?orderId=eq.${orderId}`, {
+        method: "DELETE",
+      });
+    } catch (e) {}
+
+    const res = await supaFetch(`orders?id=eq.${orderId}`, {
+      method: "DELETE",
+    });
+    if (res.ok) {
+      return { success: true };
+    }
+    throw new Error("Failed to delete order from Supabase");
+  } catch (err: any) {
+    throw new Error(err.message || "Failed to delete order");
+  }
+}
+
 export async function grantAccessApi(userId: number, bundleId?: number, productId?: number) {
   try {
     const res = await fetch(`${API_BASE}/grant-access`, {

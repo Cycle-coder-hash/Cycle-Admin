@@ -21,6 +21,7 @@ import {
   fetchOwnerProfileApi,
   approveOrderApi,
   rejectOrderApi,
+  deleteOrderApi,
   grantAccessApi,
   updateRoleApi,
   updateTicketStatusApi,
@@ -149,6 +150,20 @@ export const App: React.FC = () => {
       loadLiveData();
     } catch (err: any) {
       alert("Failed to approve order: " + err.message);
+    }
+  };
+
+  
+  const handleDeleteOrder = async (orderId: number) => {
+    if (!window.confirm(`Are you sure you want to permanently delete Order #${orderId} from the database?`)) {
+      return;
+    }
+    try {
+      await deleteOrderApi(orderId);
+      setOrders((prev) => prev.filter((o) => o.id !== orderId));
+      alert(`Order #${orderId} has been successfully deleted from the database.`);
+    } catch (err: any) {
+      alert(`Failed to delete order: ${err.message}`);
     }
   };
 
@@ -407,7 +422,7 @@ export const App: React.FC = () => {
             <DashboardOverview orders={orders} students={students} onNavigateTab={setActiveTab} />
           )}
           {activeTab === "orders" && (
-            <PaymentApprovals orders={orders} onApprove={handleApproveOrder} onReject={handleRejectOrder} />
+            <PaymentApprovals orders={orders} onApprove={handleApproveOrder} onReject={handleRejectOrder} onDelete={handleDeleteOrder} />
           )}
           {activeTab === "students" && (
             <StudentManagement
