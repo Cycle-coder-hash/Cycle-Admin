@@ -14,6 +14,9 @@ export interface EbookFormData {
   fileName: string | null;
   fileSize: string | null;
   isPublished: boolean;
+  isFree: boolean;
+  price: string;
+  coverImageUrl?: string | null;
 }
 
 interface EbookModalProps {
@@ -153,6 +156,93 @@ export const EbookModal: React.FC<EbookModalProps> = ({
                 className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-semibold outline-none focus:border-sky-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+              Cover Image URL (Optional)
+            </label>
+            <input
+              type="url"
+              placeholder="https://.../cover.png or image link"
+              value={ebookForm.coverImageUrl || ""}
+              onChange={(e) => setEbookForm((prev) => ({ ...prev, coverImageUrl: e.target.value || null }))}
+              className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-medium outline-none focus:border-sky-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+            />
+          </div>
+
+          {/* Access & Pricing Configuration */}
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-950/40 space-y-3">
+            <div className="font-bold text-xs text-slate-800 dark:text-slate-200">
+              Access & Pricing Model
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label
+                onClick={() => setEbookForm((prev) => ({ ...prev, isFree: true, price: "0" }))}
+                className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition ${
+                  ebookForm.isFree
+                    ? "border-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/20"
+                    : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="ebookAccessType"
+                  checked={ebookForm.isFree}
+                  onChange={() => setEbookForm((prev) => ({ ...prev, isFree: true, price: "0" }))}
+                  className="mt-0.5 text-emerald-600 focus:ring-emerald-500"
+                />
+                <div>
+                  <div className="font-bold text-xs text-slate-900 dark:text-white">Free Resource</div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Available to students via the Free eBook package.
+                  </div>
+                </div>
+              </label>
+
+              <label
+                onClick={() => setEbookForm((prev) => ({ ...prev, isFree: false, price: prev.price === "0" ? "299" : prev.price }))}
+                className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition ${
+                  !ebookForm.isFree
+                    ? "border-sky-500 bg-sky-50/40 dark:bg-sky-950/20"
+                    : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="ebookAccessType"
+                  checked={!ebookForm.isFree}
+                  onChange={() => setEbookForm((prev) => ({ ...prev, isFree: false, price: prev.price === "0" ? "299" : prev.price }))}
+                  className="mt-0.5 text-sky-600 focus:ring-sky-500"
+                />
+                <div>
+                  <div className="font-bold text-xs text-slate-900 dark:text-white">Paid Premium PDF</div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Requires direct purchase or Master Blueprint bundle.
+                  </div>
+                </div>
+              </label>
+            </div>
+
+            {!ebookForm.isFree && (
+              <div className="pt-2">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Price (BDT) *
+                </label>
+                <div className="relative mt-1">
+                  <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">৳</span>
+                  <input
+                    type="number"
+                    min={1}
+                    required={!ebookForm.isFree}
+                    placeholder="299"
+                    value={ebookForm.price}
+                    onChange={(e) => setEbookForm((prev) => ({ ...prev, price: e.target.value }))}
+                    className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-7 pr-3 text-xs font-bold outline-none focus:border-sky-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <div>

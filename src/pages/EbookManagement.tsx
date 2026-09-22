@@ -106,10 +106,23 @@ export const EbookManagement: React.FC<EbookManagementProps> = ({
             className="flex flex-col justify-between rounded-2xl border border-slate-800 bg-[#070e1b] p-5 shadow-sm hover:border-slate-700 transition"
           >
             <div>
-              <div className="flex items-start justify-between gap-2">
-                <span className="rounded-lg bg-sky-500/10 px-2.5 py-1 text-[10px] font-black uppercase text-sky-400 border border-sky-500/20">
-                  {eb.category || "General"}
-                </span>
+              <div className="flex items-start justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="rounded-lg bg-sky-500/10 px-2.5 py-1 text-[10px] font-black uppercase text-sky-400 border border-sky-500/20">
+                    {eb.category || "General"}
+                  </span>
+                  <span
+                    className={`rounded-lg px-2 py-1 text-[10px] font-black uppercase border ${
+                      eb.isFree !== false && (Number(eb.price) === 0 || !eb.price)
+                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                        : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                    }`}
+                  >
+                    {eb.isFree !== false && (Number(eb.price) === 0 || !eb.price)
+                      ? "FREE"
+                      : `PAID · ৳${eb.price}`}
+                  </span>
+                </div>
 
                 <span
                   className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${

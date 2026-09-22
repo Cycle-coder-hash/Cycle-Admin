@@ -81,6 +81,9 @@ const initialEbookForm: EbookFormData = {
   fileName: null,
   fileSize: null,
   isPublished: true,
+  isFree: true,
+  price: "0",
+  coverImageUrl: null,
 };
 
 export const App: React.FC = () => {
@@ -234,6 +237,9 @@ export const App: React.FC = () => {
       fileName: ebook.fileName || null,
       fileSize: ebook.fileSize || null,
       isPublished: ebook.isPublished !== false,
+      isFree: ebook.isFree !== undefined ? ebook.isFree : (Number(ebook.price) === 0 || !ebook.price),
+      price: ebook.price ? String(ebook.price) : "0",
+      coverImageUrl: ebook.coverImageUrl || null,
     });
     setIsEbookModalOpen(true);
   };
@@ -271,6 +277,9 @@ export const App: React.FC = () => {
         fileName: ebookForm.fileName,
         fileSize: ebookForm.fileSize,
         isPublished: ebookForm.isPublished,
+        isFree: ebookForm.isFree,
+        price: ebookForm.isFree ? "0" : (ebookForm.price || "299"),
+        coverImageUrl: ebookForm.coverImageUrl || undefined,
       };
 
       if (editingEbook) {
