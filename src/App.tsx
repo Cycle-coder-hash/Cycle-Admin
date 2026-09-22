@@ -205,7 +205,7 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleUpdateTicketStatus = async (ticketId: number, status: "open" | "in_progress" | "resolved") => {
+  const handleUpdateTicketStatus = async (ticketId: number, status: string) => {
     try {
       await updateTicketStatusApi(ticketId, status);
       setActionSuccess("Support ticket status updated in DB.");

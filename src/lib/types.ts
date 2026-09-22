@@ -35,11 +35,16 @@ export interface SupportTicket {
   userName?: string;
   userEmail?: string;
   category?: string;
+  priority?: "low" | "medium" | "high" | "urgent" | string;
   subject: string;
   message: string;
-  status: "open" | "in_progress" | "waiting_user" | "resolved" | "closed" | string;
+  status: "open" | "pending" | "in_progress" | "waiting_customer" | "waiting_user" | "solved" | "resolved" | "closed" | string;
   attachmentUrl?: string | null;
   assignedStaff?: string | null;
+  firstResponseAt?: string | Date | null;
+  lastReplyAt?: string | Date | null;
+  solvedAt?: string | Date | null;
+  closedAt?: string | Date | null;
   createdAt: string | Date;
   updatedAt?: string | Date;
 }
@@ -53,6 +58,35 @@ export interface SupportTicketReply {
   message: string;
   attachmentUrl?: string | null;
   createdAt: string | Date;
+}
+
+export interface TicketInternalNote {
+  id: number;
+  ticketId: number;
+  authorId?: number | null;
+  authorName: string;
+  authorEmail?: string | null;
+  authorRole?: string;
+  content: string;
+  createdAt: string | Date;
+}
+
+export interface SupportMetrics {
+  total: number;
+  open: number;
+  pending: number;
+  inProgress: number;
+  waitingCustomer: number;
+  solved: number;
+  closed: number;
+  priorities: {
+    low: number;
+    medium: number;
+    high: number;
+    urgent: number;
+  };
+  avgResponseMinutes: number;
+  avgResolutionHours: number;
 }
 
 export interface AuditEvent {

@@ -1,5 +1,5 @@
-import { Order, Student, SupportTicket, SupportTicketReply, AuditEvent, CourseTelegramConfig } from "./types";
-export type { CourseTelegramConfig, SupportTicketReply };
+import { Order, Student, SupportTicket, SupportTicketReply, TicketInternalNote, SupportMetrics, AuditEvent, CourseTelegramConfig } from "./types";
+export type { CourseTelegramConfig, SupportTicketReply, TicketInternalNote, SupportMetrics };
 
 const rawApiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL || "https://cycleofchart.vercel.app";
 const API_BASE = rawApiUrl.endsWith("/api/admin") 
@@ -413,13 +413,17 @@ export async function updateTicketStatusApi(ticketId: number, status: string) {
 
 export async function fetchTicketDetailsApi(
   ticketId: number
-): Promise<{ ticket: SupportTicket | null; replies: SupportTicketReply[] }> {
+): Promise<{ ticket: SupportTicket | null; replies: SupportTicketReply[]; internalNotes: TicketInternalNote[] }> {
   try {
     const res = await fetch(`${API_BASE}/tickets/${ticketId}`);
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.ticket) {
-        return { ticket: data.ticket, replies: Array.isArray(data.replies) ? data.replies : [] };
+        return {
+          ticket: data.ticket,
+          replies: Array.isArray(data.replies) ? data.replies : [],
+          internalNotes: Array.isArray(data.internalNotes) ? data.internalNotes : [],
+        };
       }
     }
   } catch (err) {
@@ -428,10 +432,11 @@ export async function fetchTicketDetailsApi(
 
   // Supabase fallback
   try {
-    const [ticketRes, regRes, repliesRes] = await Promise.all([
+    const [ticketRes, regRes, repliesRes, notesRes] = await Promise.all([
       supaFetch(`supportTickets?id=eq.${ticketId}&select=*`),
       supaFetch("settings?key=eq.global_support_tickets_registry&select=value"),
       supaFetch(`settings?key=eq.support_ticket_replies_${ticketId}&select=value`),
+      supaFetch(`settings?key=eq.support_ticket_notes_${ticketId}&select=value`),
     ]);
 
     let ticket: SupportTicket | null = null;
@@ -454,17 +459,25 @@ export async function fetchTicketDetailsApi(
       }
     }
 
-    return { ticket, replies };
+    let internalNotes: TicketInternalNote[] = [];
+    if (notesRes.ok) {
+      const noteRows = await notesRes.json();
+      if (noteRows.length > 0 && Array.isArray(noteRows[0]?.value)) {
+        internalNotes = noteRows[0].value;
+      }
+    }
+
+    return { ticket, replies, internalNotes };
   } catch (err) {
     console.warn("[fetchTicketDetailsApi error]:", err);
-    return { ticket: null, replies: [] };
+    return { ticket: null, replies: [], internalNotes: [] };
   }
 }
 
 export async function replyTicketApi(
   ticketId: number,
   message: string,
-  status: string = "waiting_user",
+  status: string = "waiting_customer",
   senderName: string = "Support Specialist",
   attachmentUrl?: string
 ): Promise<{ success: boolean; reply?: SupportTicketReply }> {
@@ -556,6 +569,192 @@ export async function replyTicketApi(
   } catch (err: any) {
     throw new Error(err.message || "Failed to submit reply");
   }
+}
+
+export async function addTicketInternalNoteApi(
+  ticketId: number,
+  note: string,
+  authorName: string = "Staff Specialist",
+  authorEmail?: string,
+  authorRole: string = "admin"
+): Promise<{ success: boolean; note?: TicketInternalNote }> {
+  try {
+    const res = await fetch(`${API_BASE}/tickets/internal-note`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticketId, note, authorName, authorEmail, authorRole }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) return data;
+    }
+  } catch (err) {
+    console.warn("[addTicketInternalNoteApi primary failed, trying Supabase direct]:", err);
+  }
+
+  // Supabase fallback
+  try {
+    const now = new Date().toISOString();
+    const notesRes = await supaFetch(`settings?key=eq.support_ticket_notes_${ticketId}&select=value`);
+    let notes: TicketInternalNote[] = [];
+    if (notesRes.ok) {
+      const rows = await notesRes.json();
+      if (rows.length > 0 && Array.isArray(rows[0]?.value)) {
+        notes = rows[0].value;
+      }
+    }
+
+    const newNote: TicketInternalNote = {
+      id: Date.now(),
+      ticketId,
+      authorName,
+      authorEmail: authorEmail || null,
+      authorRole,
+      content: note.trim(),
+      createdAt: now,
+    };
+    notes.push(newNote);
+
+    await supaFetch(`settings?key=eq.support_ticket_notes_${ticketId}`, {
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates" },
+      body: JSON.stringify({
+        key: `support_ticket_notes_${ticketId}`,
+        value: notes,
+        updatedAt: now,
+      }),
+    });
+
+    return { success: true, note: newNote };
+  } catch (err: any) {
+    throw new Error(err.message || "Failed to add internal note");
+  }
+}
+
+export async function updateTicketPriorityApi(
+  ticketId: number,
+  priority: string
+): Promise<{ success: boolean; priority?: string }> {
+  try {
+    const res = await fetch(`${API_BASE}/tickets/priority`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticketId, priority }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) return data;
+    }
+  } catch (err) {
+    console.warn("[updateTicketPriorityApi primary failed, trying Supabase direct]:", err);
+  }
+
+  try {
+    const now = new Date().toISOString();
+    await supaFetch(`supportTickets?id=eq.${ticketId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ priority, updatedAt: now }),
+    });
+
+    try {
+      const regRes = await supaFetch("settings?key=eq.global_support_tickets_registry&select=value");
+      if (regRes.ok) {
+        const rows = await regRes.json();
+        if (rows.length > 0 && Array.isArray(rows[0]?.value)) {
+          const list = rows[0].value;
+          const idx = list.findIndex((t: any) => t.id === ticketId);
+          if (idx >= 0) {
+            list[idx].priority = priority;
+            list[idx].updatedAt = now;
+            await supaFetch("settings?key=eq.global_support_tickets_registry", {
+              method: "POST",
+              headers: { Prefer: "resolution=merge-duplicates" },
+              body: JSON.stringify({
+                key: "global_support_tickets_registry",
+                value: list,
+                updatedAt: now,
+              }),
+            });
+          }
+        }
+      }
+    } catch {}
+
+    return { success: true, priority };
+  } catch (err: any) {
+    throw new Error(err.message || "Failed to update ticket priority");
+  }
+}
+
+export async function assignTicketStaffApi(
+  ticketId: number,
+  staffName: string,
+  staffId?: number | null
+): Promise<{ success: boolean; assignedStaff?: string }> {
+  try {
+    const res = await fetch(`${API_BASE}/tickets/assign`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticketId, staffName, staffId }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) return data;
+    }
+  } catch (err) {
+    console.warn("[assignTicketStaffApi primary failed, trying Supabase direct]:", err);
+  }
+
+  try {
+    const now = new Date().toISOString();
+    await supaFetch(`supportTickets?id=eq.${ticketId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ assignedStaff: staffName, updatedAt: now }),
+    });
+
+    try {
+      const regRes = await supaFetch("settings?key=eq.global_support_tickets_registry&select=value");
+      if (regRes.ok) {
+        const rows = await regRes.json();
+        if (rows.length > 0 && Array.isArray(rows[0]?.value)) {
+          const list = rows[0].value;
+          const idx = list.findIndex((t: any) => t.id === ticketId);
+          if (idx >= 0) {
+            list[idx].assignedStaff = staffName;
+            list[idx].updatedAt = now;
+            await supaFetch("settings?key=eq.global_support_tickets_registry", {
+              method: "POST",
+              headers: { Prefer: "resolution=merge-duplicates" },
+              body: JSON.stringify({
+                key: "global_support_tickets_registry",
+                value: list,
+                updatedAt: now,
+              }),
+            });
+          }
+        }
+      }
+    } catch {}
+
+    return { success: true, assignedStaff: staffName };
+  } catch (err: any) {
+    throw new Error(err.message || "Failed to assign staff to ticket");
+  }
+}
+
+export async function fetchSupportMetricsApi(): Promise<SupportMetrics | null> {
+  try {
+    const res = await fetch(`${API_BASE}/support-metrics`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.metrics) {
+        return data.metrics as SupportMetrics;
+      }
+    }
+  } catch (err) {
+    console.warn("[fetchSupportMetricsApi primary failed]:", err);
+  }
+  return null;
 }
 
 export async function fetchAdminEbooks(): Promise<any[]> {
