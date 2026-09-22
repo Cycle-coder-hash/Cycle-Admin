@@ -1,4 +1,5 @@
-import { Order, Student, SupportTicket, AuditEvent } from "./types";
+import { Order, Student, SupportTicket, AuditEvent, CourseTelegramConfig } from "./types";
+export type { CourseTelegramConfig };
 
 const rawApiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL || "https://cycleofchart.vercel.app";
 const API_BASE = rawApiUrl.endsWith("/api/admin") 
@@ -670,6 +671,8 @@ export async function updateOwnerProfileApi(payload: any) {
     }
   }
 
+  let savedSuccessfully = false;
+
   try {
     const res = await fetch(`${API_BASE}/owner-profile`, {
       method: "POST",
@@ -680,6 +683,7 @@ export async function updateOwnerProfileApi(payload: any) {
       const data = await res.json();
       if (data.success && data.profile) {
         updatedProfile = data.profile;
+        savedSuccessfully = true;
       }
     }
   } catch (err) {
@@ -688,7 +692,7 @@ export async function updateOwnerProfileApi(payload: any) {
 
   // Always also write directly to Supabase settings for instant guaranteed consistency
   try {
-    await supaFetch("settings", {
+    const supaRes = await supaFetch("settings?on_conflict=key", {
       method: "POST",
       headers: { "Prefer": "resolution=merge-duplicates" },
       body: JSON.stringify({
@@ -696,8 +700,18 @@ export async function updateOwnerProfileApi(payload: any) {
         value: JSON.stringify(updatedProfile),
       }),
     });
+    if (supaRes.ok) {
+      savedSuccessfully = true;
+    } else {
+      const errText = await supaRes.text();
+      console.warn("[Supabase direct owner_profile upsert failed]:", supaRes.status, errText);
+    }
   } catch (err) {
     console.warn("[Supabase direct owner_profile upsert error]:", err);
+  }
+
+  if (!savedSuccessfully) {
+    throw new Error("Failed to save Owner Profile to both backend API and Supabase database.");
   }
 
   return updatedProfile;
@@ -831,7 +845,7 @@ export async function updatePaymentSettingsApi(config: PaymentSettingsConfig): P
 
   // Direct Supabase upsert of payment_gateways_config
   try {
-    await supaFetch("settings", {
+    await supaFetch("settings?on_conflict=key", {
       method: "POST",
       headers: { "Prefer": "resolution=merge-duplicates" },
       body: JSON.stringify({
@@ -842,22 +856,22 @@ export async function updatePaymentSettingsApi(config: PaymentSettingsConfig): P
 
     // Also sync legacy individual keys
     await Promise.allSettled([
-      supaFetch("settings", {
+      supaFetch("settings?on_conflict=key", {
         method: "POST",
         headers: { "Prefer": "resolution=merge-duplicates" },
         body: JSON.stringify({ key: "bkash", value: config.bkash.number }),
       }),
-      supaFetch("settings", {
+      supaFetch("settings?on_conflict=key", {
         method: "POST",
         headers: { "Prefer": "resolution=merge-duplicates" },
         body: JSON.stringify({ key: "nagad", value: config.nagad.number }),
       }),
-      supaFetch("settings", {
+      supaFetch("settings?on_conflict=key", {
         method: "POST",
         headers: { "Prefer": "resolution=merge-duplicates" },
         body: JSON.stringify({ key: "rocket", value: config.rocket.number }),
       }),
-      supaFetch("settings", {
+      supaFetch("settings?on_conflict=key", {
         method: "POST",
         headers: { "Prefer": "resolution=merge-duplicates" },
         body: JSON.stringify({ key: "announcement", value: config.announcement || "" }),
@@ -868,4 +882,88 @@ export async function updatePaymentSettingsApi(config: PaymentSettingsConfig): P
   }
 
   return config;
+}
+
+export const defaultCourseTelegramConfig: CourseTelegramConfig = {
+  enabled: true,
+  telegramUrl: "",
+  titleEn: "COURSE ACCESS IS READY",
+  titleBn: "কোর্স অ্যাক্সেস প্রস্তুত",
+  messageEn: "Before you begin your course journey, join our official Telegram community for real-time course updates, institutional study materials, session announcements, and dedicated student support.",
+  messageBn: "কোর্স শুরু করার আগে আমাদের অফিশিয়াল Telegram কমিউনিটিতে যুক্ত হোন। এখানে কোর্স সংক্রান্ত আপডেট, প্রাতিষ্ঠানিক স্টাডি ম্যাটেরিয়াল, সেশন অ্যানাউন্সমেন্ট এবং ডেডিকেটেড স্টুডেন্ট সাপোর্ট পাবেন।",
+  joinButtonTextEn: "JOIN TELEGRAM",
+  joinButtonTextBn: "TELEGRAM এ যুক্ত হোন",
+  dismissButtonTextEn: "MAYBE LATER",
+  dismissButtonTextBn: "পরে যুক্ত হব",
+  displayMode: "once",
+  popupDelay: 0,
+};
+
+export async function fetchCourseTelegramConfigApi(): Promise<CourseTelegramConfig> {
+  try {
+    const res = await fetch(`${API_BASE}/course-telegram-settings`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.config) {
+        return {
+          ...defaultCourseTelegramConfig,
+          ...data.config,
+        };
+      }
+    }
+  } catch (err) {
+    console.warn("[fetchCourseTelegramConfigApi API_BASE failed, reading Supabase settings]:", err);
+  }
+
+  try {
+    const res = await supaFetch("settings?key=eq.course_telegram_popup_config&select=value");
+    if (res.ok) {
+      const rows = await res.json();
+      if (rows && rows[0]?.value) {
+        const parsed = typeof rows[0].value === "string" ? JSON.parse(rows[0].value) : rows[0].value;
+        return {
+          ...defaultCourseTelegramConfig,
+          ...parsed,
+        };
+      }
+    }
+  } catch (err) {
+    console.warn("[fetchCourseTelegramConfigApi Supabase fallback failed]:", err);
+  }
+
+  return defaultCourseTelegramConfig;
+}
+
+export async function updateCourseTelegramConfigApi(config: CourseTelegramConfig): Promise<CourseTelegramConfig> {
+  let result = { ...config };
+  try {
+    const res = await fetch(`${API_BASE}/course-telegram-settings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(config),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.config) {
+        result = data.config;
+      }
+    }
+  } catch (err) {
+    console.warn("[updateCourseTelegramConfigApi API_BASE failed, writing to Supabase directly]:", err);
+  }
+
+  try {
+    await supaFetch("settings?on_conflict=key", {
+      method: "POST",
+      headers: { "Prefer": "resolution=merge-duplicates" },
+      body: JSON.stringify({
+        key: "course_telegram_popup_config",
+        value: JSON.stringify(result),
+      }),
+    });
+  } catch (err) {
+    console.warn("[updateCourseTelegramConfigApi Supabase direct upsert error]:", err);
+  }
+
+  return result;
 }

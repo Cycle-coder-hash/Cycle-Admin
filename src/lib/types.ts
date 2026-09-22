@@ -46,3 +46,18 @@ export interface AuditEvent {
   metadata?: any;
   createdAt: string | Date;
 }
+
+export interface CourseTelegramConfig {
+  enabled: boolean;
+  telegramUrl: string;
+  titleEn: string;
+  titleBn: string;
+  messageEn: string;
+  messageBn: string;
+  joinButtonTextEn: string;
+  joinButtonTextBn: string;
+  dismissButtonTextEn: string;
+  dismissButtonTextBn: string;
+  displayMode: "once" | "until_joined";
+  popupDelay?: number;
+}

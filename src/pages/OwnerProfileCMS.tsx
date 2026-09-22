@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Camera,
   Upload,
@@ -106,6 +106,12 @@ export const OwnerProfileCMS: React.FC<OwnerProfileCMSProps> = ({
 }) => {
   const [form, setForm] = useState<OwnerProfileData>({ ...profile });
   const [previewLang, setPreviewLang] = useState<"en" | "bn">("en");
+
+  useEffect(() => {
+    if (profile) {
+      setForm({ ...profile });
+    }
+  }, [profile]);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
