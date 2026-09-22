@@ -1,5 +1,5 @@
-import { Order, Student, SupportTicket, AuditEvent, CourseTelegramConfig } from "./types";
-export type { CourseTelegramConfig };
+import { Order, Student, SupportTicket, SupportTicketReply, AuditEvent, CourseTelegramConfig } from "./types";
+export type { CourseTelegramConfig, SupportTicketReply };
 
 const rawApiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL || "https://cycleofchart.vercel.app";
 const API_BASE = rawApiUrl.endsWith("/api/admin") 
@@ -152,11 +152,33 @@ export async function fetchAdminTickets(): Promise<SupportTicket[]> {
   }
 
   try {
-    const res = await supaFetch("supportTickets?select=*&order=id.desc");
-    if (res.ok) {
-      const tickets = await res.json();
-      return Array.isArray(tickets) ? tickets : [];
+    const [tableRes, settingsRes] = await Promise.all([
+      supaFetch("supportTickets?select=*&order=id.desc"),
+      supaFetch("settings?key=eq.global_support_tickets_registry&select=value"),
+    ]);
+    const ticketsMap = new Map<number, SupportTicket>();
+
+    if (tableRes.ok) {
+      const tickets = await tableRes.json();
+      if (Array.isArray(tickets)) {
+        tickets.forEach((t: any) => ticketsMap.set(t.id, t));
+      }
     }
+    if (settingsRes.ok) {
+      const rows = await settingsRes.json();
+      if (rows.length > 0 && Array.isArray(rows[0]?.value)) {
+        rows[0].value.forEach((t: SupportTicket) => {
+          if (!ticketsMap.has(t.id)) {
+            ticketsMap.set(t.id, t);
+          } else {
+            ticketsMap.set(t.id, { ...ticketsMap.get(t.id), ...t });
+          }
+        });
+      }
+    }
+    return Array.from(ticketsMap.values()).sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
   } catch {}
   return [];
 }
@@ -386,6 +408,153 @@ export async function updateTicketStatusApi(ticketId: number, status: string) {
     return { success: true };
   } catch (err: any) {
     throw new Error(err.message || "Failed to update ticket");
+  }
+}
+
+export async function fetchTicketDetailsApi(
+  ticketId: number
+): Promise<{ ticket: SupportTicket | null; replies: SupportTicketReply[] }> {
+  try {
+    const res = await fetch(`${API_BASE}/tickets/${ticketId}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.ticket) {
+        return { ticket: data.ticket, replies: Array.isArray(data.replies) ? data.replies : [] };
+      }
+    }
+  } catch (err) {
+    console.warn("[API_BASE/tickets/:id unreachable, falling back to direct Supabase]:", err);
+  }
+
+  // Supabase fallback
+  try {
+    const [ticketRes, regRes, repliesRes] = await Promise.all([
+      supaFetch(`supportTickets?id=eq.${ticketId}&select=*`),
+      supaFetch("settings?key=eq.global_support_tickets_registry&select=value"),
+      supaFetch(`settings?key=eq.support_ticket_replies_${ticketId}&select=value`),
+    ]);
+
+    let ticket: SupportTicket | null = null;
+    if (ticketRes.ok) {
+      const rows = await ticketRes.json();
+      if (Array.isArray(rows) && rows.length > 0) ticket = rows[0];
+    }
+    if (!ticket && regRes.ok) {
+      const regRows = await regRes.json();
+      if (regRows.length > 0 && Array.isArray(regRows[0]?.value)) {
+        ticket = regRows[0].value.find((t: any) => t.id === ticketId) || null;
+      }
+    }
+
+    let replies: SupportTicketReply[] = [];
+    if (repliesRes.ok) {
+      const replyRows = await repliesRes.json();
+      if (replyRows.length > 0 && Array.isArray(replyRows[0]?.value)) {
+        replies = replyRows[0].value;
+      }
+    }
+
+    return { ticket, replies };
+  } catch (err) {
+    console.warn("[fetchTicketDetailsApi error]:", err);
+    return { ticket: null, replies: [] };
+  }
+}
+
+export async function replyTicketApi(
+  ticketId: number,
+  message: string,
+  status: string = "waiting_user",
+  senderName: string = "Support Specialist",
+  attachmentUrl?: string
+): Promise<{ success: boolean; reply?: SupportTicketReply }> {
+  try {
+    const res = await fetch(`${API_BASE}/reply-ticket`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticketId, message, status, senderName, attachmentUrl }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) return data;
+    }
+  } catch (err) {
+    console.warn("[replyTicketApi primary failed, trying Supabase direct]:", err);
+  }
+
+  // Supabase fallback
+  try {
+    const now = new Date().toISOString();
+
+    // 1. Update status in table
+    try {
+      await supaFetch(`supportTickets?id=eq.${ticketId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status, assignedStaff: senderName, updatedAt: now }),
+      });
+    } catch {}
+
+    // 2. Update status in settings registry
+    try {
+      const regRes = await supaFetch("settings?key=eq.global_support_tickets_registry&select=value");
+      if (regRes.ok) {
+        const rows = await regRes.json();
+        if (rows.length > 0 && Array.isArray(rows[0]?.value)) {
+          const list = rows[0].value;
+          const idx = list.findIndex((t: any) => t.id === ticketId);
+          if (idx >= 0) {
+            list[idx].status = status;
+            list[idx].assignedStaff = senderName;
+            list[idx].updatedAt = now;
+            await supaFetch("settings?key=eq.global_support_tickets_registry", {
+              method: "POST",
+              headers: { Prefer: "resolution=merge-duplicates" },
+              body: JSON.stringify({
+                key: "global_support_tickets_registry",
+                value: list,
+                updatedAt: now,
+              }),
+            });
+          }
+        }
+      }
+    } catch {}
+
+    // 3. Append reply to settings key
+    const repliesRes = await supaFetch(`settings?key=eq.support_ticket_replies_${ticketId}&select=value`);
+    let replies: any[] = [];
+    if (repliesRes.ok) {
+      const rows = await repliesRes.json();
+      if (rows.length > 0 && Array.isArray(rows[0]?.value)) {
+        replies = rows[0].value;
+      }
+    }
+
+    const newReply: SupportTicketReply = {
+      id: Date.now(),
+      ticketId,
+      senderRole: "support",
+      senderName,
+      senderEmail: "support@cycleofchart.com",
+      message: message.trim(),
+      attachmentUrl: attachmentUrl || null,
+      createdAt: now,
+    };
+    replies.push(newReply);
+
+    await supaFetch(`settings?key=eq.support_ticket_replies_${ticketId}`, {
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates" },
+      body: JSON.stringify({
+        key: `support_ticket_replies_${ticketId}`,
+        value: replies,
+        updatedAt: now,
+      }),
+    });
+
+    return { success: true, reply: newReply };
+  } catch (err: any) {
+    throw new Error(err.message || "Failed to submit reply");
   }
 }
 

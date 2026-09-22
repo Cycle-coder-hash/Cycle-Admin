@@ -30,10 +30,28 @@ export interface Student {
 
 export interface SupportTicket {
   id: number;
-  userId: number;
+  userId?: number | null;
+  ticketCode?: string;
+  userName?: string;
+  userEmail?: string;
+  category?: string;
   subject: string;
   message: string;
-  status: "open" | "in_progress" | "resolved";
+  status: "open" | "in_progress" | "waiting_user" | "resolved" | "closed" | string;
+  attachmentUrl?: string | null;
+  assignedStaff?: string | null;
+  createdAt: string | Date;
+  updatedAt?: string | Date;
+}
+
+export interface SupportTicketReply {
+  id: number;
+  ticketId: number;
+  senderRole: "user" | "support" | "admin";
+  senderName: string;
+  senderEmail?: string;
+  message: string;
+  attachmentUrl?: string | null;
   createdAt: string | Date;
 }
 

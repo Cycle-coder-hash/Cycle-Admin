@@ -465,7 +465,7 @@ export const App: React.FC = () => {
             />
           )}
           {activeTab === "support" && (
-            <SupportTickets tickets={tickets} onUpdateStatus={handleUpdateTicketStatus} />
+            <SupportTickets tickets={tickets} onUpdateStatus={handleUpdateTicketStatus} onReload={loadLiveData} />
           )}
           {activeTab === "settings" && (
             <PlatformSettings
