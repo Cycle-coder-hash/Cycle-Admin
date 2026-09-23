@@ -158,28 +158,83 @@ export async function fetchAdminTickets(): Promise<SupportTicket[]> {
     ]);
     const ticketsMap = new Map<number, SupportTicket>();
 
-    if (tableRes.ok) {
-      const tickets = await tableRes.json();
-      if (Array.isArray(tickets)) {
-        tickets.forEach((t: any) => ticketsMap.set(t.id, t));
-      }
-    }
+    // 1. Process global_support_tickets_registry as primary source of truth
+    let registryTickets: SupportTicket[] = [];
     if (settingsRes.ok) {
       const rows = await settingsRes.json();
       if (rows.length > 0 && Array.isArray(rows[0]?.value)) {
-        rows[0].value.forEach((t: SupportTicket) => {
-          if (!ticketsMap.has(t.id)) {
-            ticketsMap.set(t.id, t);
-          } else {
-            ticketsMap.set(t.id, { ...ticketsMap.get(t.id), ...t });
-          }
-        });
+        registryTickets = rows[0].value;
       }
     }
+
+    const registryById = new Map<number, SupportTicket>();
+    const registryByCode = new Map<string, SupportTicket>();
+    registryTickets.forEach((t) => {
+      registryById.set(t.id, t);
+      if (t.ticketCode) {
+        registryByCode.set(t.ticketCode.trim().toLowerCase(), t);
+      }
+    });
+
+    // 2. Fetch table rows
+    let tableTickets: any[] = [];
+    if (tableRes.ok) {
+      const data = await tableRes.json();
+      if (Array.isArray(data)) tableTickets = data;
+    }
+
+    // 3. For each table row, deduplicate against registry
+    tableTickets.forEach((row: any) => {
+      const codeMatch = row.subject ? row.subject.match(/#TKT-(\d+)/i) : null;
+      let matchedRegTicket: SupportTicket | undefined;
+
+      if (registryById.has(row.id)) {
+        matchedRegTicket = registryById.get(row.id);
+      } else if (codeMatch) {
+        const fullCode = `#TKT-${codeMatch[1]}`.toLowerCase();
+        matchedRegTicket = registryByCode.get(fullCode);
+        if (!matchedRegTicket) {
+          const numId = Number(codeMatch[1]);
+          matchedRegTicket = registryById.get(numId);
+        }
+      }
+
+      if (matchedRegTicket) {
+        const merged: SupportTicket = {
+          ...matchedRegTicket,
+          status: row.status || matchedRegTicket.status,
+          updatedAt: row.updatedAt || matchedRegTicket.updatedAt,
+        };
+        ticketsMap.set(matchedRegTicket.id, merged);
+      } else {
+        ticketsMap.set(row.id, {
+          id: row.id,
+          ticketCode: `#TKT-${row.id}`,
+          userId: row.userId,
+          subject: row.subject,
+          message: row.message,
+          category: "General",
+          priority: "medium",
+          status: row.status || "open",
+          createdAt: row.createdAt || new Date().toISOString(),
+          updatedAt: row.updatedAt || row.createdAt || new Date().toISOString(),
+        });
+      }
+    });
+
+    // 4. Add any registry tickets that were not matched by table rows
+    registryTickets.forEach((t) => {
+      if (!ticketsMap.has(t.id)) {
+        ticketsMap.set(t.id, t);
+      }
+    });
+
     return Array.from(ticketsMap.values()).sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
-  } catch {}
+  } catch (err) {
+    console.warn("[fetchAdminTickets error]:", err);
+  }
   return [];
 }
 
@@ -401,10 +456,47 @@ export async function updateTicketStatusApi(ticketId: number, status: string) {
   }
 
   try {
-    await supaFetch(`supportTickets?id=eq.${ticketId}`, {
-      method: "PATCH",
-      body: JSON.stringify({ status, updatedAt: new Date().toISOString() }),
-    });
+    const now = new Date().toISOString();
+    // 1. Update SQL table
+    try {
+      await supaFetch(`supportTickets?id=eq.${ticketId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status, updatedAt: now }),
+      });
+    } catch {}
+
+    try {
+      await supaFetch(`supportTickets?subject=ilike.*%23TKT-${ticketId}*`, {
+        method: "PATCH",
+        body: JSON.stringify({ status, updatedAt: now }),
+      });
+    } catch {}
+
+    // 2. Update global_support_tickets_registry
+    try {
+      const regRes = await supaFetch("settings?key=eq.global_support_tickets_registry&select=value");
+      if (regRes.ok) {
+        const rows = await regRes.json();
+        if (rows.length > 0 && Array.isArray(rows[0]?.value)) {
+          const list = rows[0].value;
+          const idx = list.findIndex((t: any) => t.id === ticketId || t.ticketCode === `#TKT-${ticketId}`);
+          if (idx >= 0) {
+            list[idx].status = status;
+            list[idx].updatedAt = now;
+            await supaFetch("settings?key=eq.global_support_tickets_registry", {
+              method: "POST",
+              headers: { Prefer: "resolution=merge-duplicates" },
+              body: JSON.stringify({
+                key: "global_support_tickets_registry",
+                value: list,
+                updatedAt: now,
+              }),
+            });
+          }
+        }
+      }
+    } catch {}
+
     return { success: true };
   } catch (err: any) {
     throw new Error(err.message || "Failed to update ticket");
@@ -440,15 +532,31 @@ export async function fetchTicketDetailsApi(
     ]);
 
     let ticket: SupportTicket | null = null;
+    let regTicket: SupportTicket | null = null;
+
+    if (regRes.ok) {
+      const regRows = await regRes.json();
+      if (regRows.length > 0 && Array.isArray(regRows[0]?.value)) {
+        regTicket = regRows[0].value.find((t: any) => t.id === ticketId || t.ticketCode === `#TKT-${ticketId}`) || null;
+      }
+    }
+
     if (ticketRes.ok) {
       const rows = await ticketRes.json();
       if (Array.isArray(rows) && rows.length > 0) ticket = rows[0];
     }
-    if (!ticket && regRes.ok) {
-      const regRows = await regRes.json();
-      if (regRows.length > 0 && Array.isArray(regRows[0]?.value)) {
-        ticket = regRows[0].value.find((t: any) => t.id === ticketId) || null;
-      }
+
+    if (regTicket && ticket) {
+      ticket = { ...ticket, ...regTicket, status: ticket.status || regTicket.status };
+    } else if (regTicket && !ticket) {
+      ticket = regTicket;
+    } else if (ticket && !regTicket) {
+      ticket = {
+        ...ticket,
+        ticketCode: ticket.ticketCode || `#TKT-${ticket.id}`,
+        category: ticket.category || "General",
+        priority: ticket.priority || "medium",
+      };
     }
 
     let replies: SupportTicketReply[] = [];
@@ -456,6 +564,22 @@ export async function fetchTicketDetailsApi(
       const replyRows = await repliesRes.json();
       if (replyRows.length > 0 && Array.isArray(replyRows[0]?.value)) {
         replies = replyRows[0].value;
+      }
+    }
+
+    // If replies empty, try alternate key by ticket code
+    if (replies.length === 0 && ticket?.ticketCode) {
+      const codeDigits = ticket.ticketCode.replace(/\D/g, "");
+      if (codeDigits && Number(codeDigits) !== ticketId) {
+        try {
+          const altRepliesRes = await supaFetch(`settings?key=eq.support_ticket_replies_${codeDigits}&select=value`);
+          if (altRepliesRes.ok) {
+            const altRows = await altRepliesRes.json();
+            if (altRows.length > 0 && Array.isArray(altRows[0]?.value)) {
+              replies = altRows[0].value;
+            }
+          }
+        } catch {}
       }
     }
 
@@ -507,18 +631,27 @@ export async function replyTicketApi(
       });
     } catch {}
 
+    try {
+      await supaFetch(`supportTickets?subject=ilike.*%23TKT-${ticketId}*`, {
+        method: "PATCH",
+        body: JSON.stringify({ status, assignedStaff: senderName, updatedAt: now }),
+      });
+    } catch {}
+
     // 2. Update status in settings registry
+    let ticketCode = `#TKT-${ticketId}`;
     try {
       const regRes = await supaFetch("settings?key=eq.global_support_tickets_registry&select=value");
       if (regRes.ok) {
         const rows = await regRes.json();
         if (rows.length > 0 && Array.isArray(rows[0]?.value)) {
           const list = rows[0].value;
-          const idx = list.findIndex((t: any) => t.id === ticketId);
+          const idx = list.findIndex((t: any) => t.id === ticketId || t.ticketCode === `#TKT-${ticketId}`);
           if (idx >= 0) {
             list[idx].status = status;
             list[idx].assignedStaff = senderName;
             list[idx].updatedAt = now;
+            ticketCode = list[idx].ticketCode || ticketCode;
             await supaFetch("settings?key=eq.global_support_tickets_registry", {
               method: "POST",
               headers: { Prefer: "resolution=merge-duplicates" },
@@ -564,6 +697,22 @@ export async function replyTicketApi(
         updatedAt: now,
       }),
     });
+
+    // Also mirror to alternate ticket code ID key if different
+    const codeDigits = ticketCode.replace(/\D/g, "");
+    if (codeDigits && Number(codeDigits) !== ticketId) {
+      try {
+        await supaFetch(`settings?key=eq.support_ticket_replies_${codeDigits}`, {
+          method: "POST",
+          headers: { Prefer: "resolution=merge-duplicates" },
+          body: JSON.stringify({
+            key: `support_ticket_replies_${codeDigits}`,
+            value: replies,
+            updatedAt: now,
+          }),
+        });
+      } catch {}
+    }
 
     return { success: true, reply: newReply };
   } catch (err: any) {

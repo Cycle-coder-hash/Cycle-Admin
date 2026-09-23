@@ -238,6 +238,34 @@ export const SupportTickets: React.FC<SupportTicketsProps> = ({
     }
   };
 
+  // Real-time polling for ticket replies and status while modal is open
+  useEffect(() => {
+    if (!selectedTicket) return;
+    const interval = setInterval(async () => {
+      try {
+        const data = await fetchTicketDetailsApi(selectedTicket.id);
+        if (data.replies && data.replies.length > 0) {
+          setTicketReplies((prev) => {
+            if (prev.length !== data.replies.length) {
+              return data.replies;
+            }
+            return prev;
+          });
+        }
+        if (data.ticket) {
+          setSelectedTicket((prev) => {
+            if (!prev) return data.ticket;
+            if (prev.status !== data.ticket?.status || prev.updatedAt !== data.ticket?.updatedAt) {
+              return { ...prev, ...data.ticket };
+            }
+            return prev;
+          });
+        }
+      } catch {}
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [selectedTicket?.id]);
+
   // Auto-scroll conversation to bottom
   useEffect(() => {
     if (selectedTicket && activeModalTab === "chat" && !isLoadingDetails) {
