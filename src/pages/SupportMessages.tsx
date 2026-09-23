@@ -88,7 +88,7 @@ export const SupportMessages: React.FC<SupportMessagesProps> = ({ onReload }) =>
   }, [conversations, selectedConversationId]);
 
   const activeConversation = useMemo(() => {
-    return conversations.find((c) => c.id === selectedConversationId) || null;
+    return conversations.find((c) => Number(c.id) === Number(selectedConversationId)) || null;
   }, [conversations, selectedConversationId]);
 
   // 2. Load Messages for Active Conversation
@@ -148,7 +148,7 @@ export const SupportMessages: React.FC<SupportMessagesProps> = ({ onReload }) =>
       markConversationReadApi(selectedConversationId)
         .then(() => {
           setConversations((prev) =>
-            prev.map((c) => (c.id === selectedConversationId ? { ...c, unreadCount: 0 } : c))
+            prev.map((c) => (Number(c.id) === Number(selectedConversationId) ? { ...c, unreadCount: 0 } : c))
           );
           if (onReload) onReload();
         })
@@ -316,7 +316,7 @@ export const SupportMessages: React.FC<SupportMessagesProps> = ({ onReload }) =>
               </div>
             ) : (
               filteredConversations.map((conv) => {
-                const isSelected = conv.id === selectedConversationId;
+                const isSelected = Number(conv.id) === Number(selectedConversationId);
                 const hasUnread = conv.unreadCount > 0;
                 const lastMsg = conv.lastMessage;
                 const customerName = conv.customer?.name || `Customer #${conv.customerId}`;

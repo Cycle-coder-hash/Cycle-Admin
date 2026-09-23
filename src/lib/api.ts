@@ -158,8 +158,76 @@ export async function fetchSupportConversationsApi(): Promise<SupportConversatio
     const res = await supaFetch("settings?key=eq.support_conversations_registry&select=value");
     if (res.ok) {
       const rows = await res.json();
-      if (rows && rows[0]?.value && Array.isArray(rows[0].value)) {
-        return rows[0].value;
+      if (rows && rows[0]?.value) {
+        const rawVal = rows[0].value;
+        const list = typeof rawVal === "string" ? JSON.parse(rawVal) : rawVal;
+        if (Array.isArray(list)) {
+          // Batch fetch users & messages
+          const customerIds = Array.from(new Set(list.map((c: any) => Number(c.customerId)).filter((id: number) => !isNaN(id))));
+          const [usersRes, msgsRows] = await Promise.all([
+            customerIds.length > 0
+              ? supaFetch(`users?id=in.(${customerIds.join(",")})&select=id,name,email,phone`)
+              : Promise.resolve({ ok: false, json: () => Promise.resolve([]) } as any),
+            Promise.all(
+              list.map(async (c: any) => {
+                try {
+                  const mRes = await supaFetch(`settings?key=eq.support_messages_${c.id}&select=value`);
+                  if (mRes.ok) {
+                    const mRows = await mRes.json();
+                    if (mRows && mRows[0]?.value) {
+                      const mVal = mRows[0].value;
+                      const parsed = typeof mVal === "string" ? JSON.parse(mVal) : mVal;
+                      return { convId: Number(c.id), messages: Array.isArray(parsed) ? parsed : [] };
+                    }
+                  }
+                } catch {}
+                return { convId: Number(c.id), messages: [] };
+              })
+            ),
+          ]);
+
+          const usersList = usersRes.ok ? await usersRes.json() : [];
+          const usersMap = new Map((Array.isArray(usersList) ? usersList : []).map((u: any) => [Number(u.id), u]));
+          const msgsMap = new Map(msgsRows.map((m) => [m.convId, m.messages]));
+
+          const summaries = list.map((conv: any) => {
+            const numConvId = Number(conv.id);
+            const numCustId = Number(conv.customerId);
+            const user = usersMap.get(numCustId);
+            const messages = msgsMap.get(numConvId) || [];
+            const lastMsg = messages.length > 0 ? messages[messages.length - 1] : conv.lastMessage || null;
+            const unreadCount = messages.filter(
+              (m: any) => (m.senderRole === "customer" || m.senderRole === "user") && !m.readAt
+            ).length;
+
+            return {
+              id: numConvId,
+              customerId: numCustId,
+              createdAt: conv.createdAt || new Date().toISOString(),
+              updatedAt: conv.updatedAt || new Date().toISOString(),
+              lastMessageAt: conv.lastMessageAt || (lastMsg ? lastMsg.createdAt : conv.createdAt),
+              customer: {
+                id: numCustId,
+                name: user?.name || conv.customer?.name || `Customer #${numCustId}`,
+                email: user?.email || conv.customer?.email || null,
+                phone: user?.phone || conv.customer?.phone || null,
+                avatar: user?.avatar || conv.customer?.avatar || null,
+                createdAt: user?.createdAt || null,
+              },
+              lastMessage: lastMsg,
+              unreadCount,
+              totalMessages: messages.length,
+            };
+          });
+
+          summaries.sort((a: any, b: any) => {
+            const timeA = new Date(a.lastMessageAt || a.updatedAt || a.createdAt).getTime();
+            const timeB = new Date(b.lastMessageAt || b.updatedAt || b.createdAt).getTime();
+            return timeB - timeA;
+          });
+
+          return summaries;
+        }
       }
     }
   } catch (err) {
@@ -378,11 +446,12 @@ export async function updateRoleApi(userId: number, role: "user" | "support" | "
 }
 
 export async function markConversationReadApi(conversationId: number): Promise<{ success: boolean }> {
+  const numId = Number(conversationId);
   try {
     const res = await fetch(`${API_BASE}/support/mark-read`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ conversationId }),
+      body: JSON.stringify({ conversationId: numId }),
     });
     if (res.ok) {
       const data = await res.json();
@@ -395,23 +464,58 @@ export async function markConversationReadApi(conversationId: number): Promise<{
   // Supabase fallback: update support_conversations_registry & support_messages_{id}
   try {
     const now = new Date().toISOString();
+
+    // 1. Mark unread messages in support_messages_{id} as read
+    const msgsRes = await supaFetch(`settings?key=eq.support_messages_${numId}&select=value`);
+    if (msgsRes.ok) {
+      const rows = await msgsRes.json();
+      if (rows && rows[0]?.value) {
+        const rawVal = rows[0].value;
+        const msgs = typeof rawVal === "string" ? JSON.parse(rawVal) : rawVal;
+        if (Array.isArray(msgs)) {
+          let modified = false;
+          for (const m of msgs) {
+            if (m.senderRole !== "admin" && !m.readAt) {
+              m.readAt = now;
+              modified = true;
+            }
+          }
+          if (modified) {
+            await supaFetch(`settings?key=eq.support_messages_${numId}`, {
+              method: "POST",
+              headers: { Prefer: "resolution=merge-duplicates" },
+              body: JSON.stringify({
+                key: `support_messages_${numId}`,
+                value: JSON.stringify(msgs),
+                updatedAt: now,
+              }),
+            });
+          }
+        }
+      }
+    }
+
+    // 2. Update conversation registry
     const regRes = await supaFetch("settings?key=eq.support_conversations_registry&select=value");
     if (regRes.ok) {
       const rows = await regRes.json();
-      if (rows && rows[0]?.value && Array.isArray(rows[0].value)) {
-        const list: SupportConversation[] = rows[0].value;
-        const conv = list.find((c) => c.id === conversationId);
-        if (conv) {
-          conv.unreadCount = 0;
-          await supaFetch("settings?key=eq.support_conversations_registry", {
-            method: "POST",
-            headers: { Prefer: "resolution=merge-duplicates" },
-            body: JSON.stringify({
-              key: "support_conversations_registry",
-              value: list,
-              updatedAt: now,
-            }),
-          });
+      if (rows && rows[0]?.value) {
+        const rawVal = rows[0].value;
+        const list = typeof rawVal === "string" ? JSON.parse(rawVal) : rawVal;
+        if (Array.isArray(list)) {
+          const conv = list.find((c: any) => Number(c.id) === numId);
+          if (conv) {
+            conv.unreadCount = 0;
+            await supaFetch("settings?key=eq.support_conversations_registry", {
+              method: "POST",
+              headers: { Prefer: "resolution=merge-duplicates" },
+              body: JSON.stringify({
+                key: "support_conversations_registry",
+                value: JSON.stringify(list),
+                updatedAt: now,
+              }),
+            });
+          }
         }
       }
     }
@@ -423,8 +527,9 @@ export async function markConversationReadApi(conversationId: number): Promise<{
 }
 
 export async function fetchConversationMessagesApi(conversationId: number): Promise<SupportMessage[]> {
+  const numId = Number(conversationId);
   try {
-    const res = await fetch(`${API_BASE}/support/conversations/${conversationId}/messages`);
+    const res = await fetch(`${API_BASE}/support/conversations/${numId}/messages`);
     if (res.ok) {
       const data = await res.json();
       if (data.success && Array.isArray(data.messages)) {
@@ -432,16 +537,28 @@ export async function fetchConversationMessagesApi(conversationId: number): Prom
       }
     }
   } catch (err) {
-    console.warn(`[API_BASE/support/conversations/${conversationId}/messages failed, trying Supabase]:`, err);
+    console.warn(`[API_BASE/support/conversations/${numId}/messages failed, trying Supabase]:`, err);
   }
 
   // Supabase fallback
   try {
-    const res = await supaFetch(`settings?key=eq.support_messages_${conversationId}&select=value`);
+    const res = await supaFetch(`settings?key=eq.support_messages_${numId}&select=value`);
     if (res.ok) {
       const rows = await res.json();
-      if (rows && rows[0]?.value && Array.isArray(rows[0].value)) {
-        return rows[0].value;
+      if (rows && rows[0]?.value) {
+        const rawVal = rows[0].value;
+        const parsed = typeof rawVal === "string" ? JSON.parse(rawVal) : rawVal;
+        if (Array.isArray(parsed)) {
+          return parsed.map((m: any) => ({
+            id: Number(m.id),
+            conversationId: Number(m.conversationId || numId),
+            senderId: Number(m.senderId),
+            senderRole: m.senderRole,
+            message: m.message,
+            readAt: m.readAt || null,
+            createdAt: m.createdAt,
+          }));
+        }
       }
     }
   } catch (err) {
@@ -455,14 +572,19 @@ export async function sendAdminReplyApi(
   conversationId: number,
   message: string
 ): Promise<{ success: boolean; message?: SupportMessage }> {
+  const numConvId = Number(conversationId);
+  const trimmed = message.trim();
   try {
     const res = await fetch(`${API_BASE}/support/reply`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ conversationId, message: message.trim() }),
+      body: JSON.stringify({ conversationId: numConvId, message: trimmed }),
     });
     if (res.ok) {
       const data = await res.json();
+      if (data.success && data.reply) {
+        return { success: true, message: data.reply };
+      }
       if (data.success) return data;
     }
   } catch (err) {
@@ -472,32 +594,42 @@ export async function sendAdminReplyApi(
   // Supabase fallback
   try {
     const now = new Date().toISOString();
+
+    // 1. Fetch existing messages
+    const msgsRes = await supaFetch(`settings?key=eq.support_messages_${numConvId}&select=value`);
+    let msgs: SupportMessage[] = [];
+    if (msgsRes.ok) {
+      const rows = await msgsRes.json();
+      if (rows && rows[0]?.value) {
+        const rawVal = rows[0].value;
+        const parsed = typeof rawVal === "string" ? JSON.parse(rawVal) : rawVal;
+        if (Array.isArray(parsed)) {
+          msgs = parsed;
+        }
+      }
+    }
+
+    let maxId = 0;
+    for (const m of msgs) {
+      if (Number(m.id) > maxId) maxId = Number(m.id);
+    }
     const newMsg: SupportMessage = {
-      id: Date.now(),
-      conversationId,
+      id: Math.max(maxId + 1, Date.now()),
+      conversationId: numConvId,
       senderId: 1, // Admin actor
       senderRole: "admin",
-      message: message.trim(),
+      message: trimmed,
       readAt: null,
       createdAt: now,
     };
 
-    // 1. Append message in support_messages_{conversationId}
-    const msgsRes = await supaFetch(`settings?key=eq.support_messages_${conversationId}&select=value`);
-    let msgs: SupportMessage[] = [];
-    if (msgsRes.ok) {
-      const rows = await msgsRes.json();
-      if (rows && rows[0]?.value && Array.isArray(rows[0].value)) {
-        msgs = rows[0].value;
-      }
-    }
     msgs.push(newMsg);
-    await supaFetch(`settings?key=eq.support_messages_${conversationId}`, {
+    await supaFetch(`settings?key=eq.support_messages_${numConvId}`, {
       method: "POST",
       headers: { Prefer: "resolution=merge-duplicates" },
       body: JSON.stringify({
-        key: `support_messages_${conversationId}`,
-        value: msgs,
+        key: `support_messages_${numConvId}`,
+        value: JSON.stringify(msgs),
         updatedAt: now,
       }),
     });
@@ -506,23 +638,26 @@ export async function sendAdminReplyApi(
     const regRes = await supaFetch("settings?key=eq.support_conversations_registry&select=value");
     if (regRes.ok) {
       const rows = await regRes.json();
-      if (rows && rows[0]?.value && Array.isArray(rows[0].value)) {
-        const list: SupportConversation[] = rows[0].value;
-        const conv = list.find((c) => c.id === conversationId);
-        if (conv) {
-          conv.lastMessage = newMsg;
-          conv.lastMessageAt = now;
-          conv.totalMessages = (conv.totalMessages || 0) + 1;
-          conv.updatedAt = now;
-          await supaFetch("settings?key=eq.support_conversations_registry", {
-            method: "POST",
-            headers: { Prefer: "resolution=merge-duplicates" },
-            body: JSON.stringify({
-              key: "support_conversations_registry",
-              value: list,
-              updatedAt: now,
-            }),
-          });
+      if (rows && rows[0]?.value) {
+        const rawVal = rows[0].value;
+        const list = typeof rawVal === "string" ? JSON.parse(rawVal) : rawVal;
+        if (Array.isArray(list)) {
+          const conv = list.find((c: any) => Number(c.id) === numConvId);
+          if (conv) {
+            conv.lastMessage = newMsg;
+            conv.lastMessageAt = now;
+            conv.totalMessages = (conv.totalMessages || 0) + 1;
+            conv.updatedAt = now;
+            await supaFetch("settings?key=eq.support_conversations_registry", {
+              method: "POST",
+              headers: { Prefer: "resolution=merge-duplicates" },
+              body: JSON.stringify({
+                key: "support_conversations_registry",
+                value: JSON.stringify(list),
+                updatedAt: now,
+              }),
+            });
+          }
         }
       }
     }
