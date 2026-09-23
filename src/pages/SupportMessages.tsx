@@ -163,7 +163,7 @@ export const SupportMessages: React.FC<SupportMessagesProps> = ({ onReload }) =>
     setIsSendingReply(true);
 
     try {
-      const res = await sendAdminReplyApi(selectedConversationId, text);
+      const res = await sendAdminReplyApi(selectedConversationId, text, activeConversation?.customerId);
       setReplyMessage("");
       if (res.success && res.message) {
         setMessages((prev) => [...prev, res.message!]);

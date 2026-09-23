@@ -570,7 +570,8 @@ export async function fetchConversationMessagesApi(conversationId: number): Prom
 
 export async function sendAdminReplyApi(
   conversationId: number,
-  message: string
+  message: string,
+  customerId?: number
 ): Promise<{ success: boolean; message?: SupportMessage }> {
   const numConvId = Number(conversationId);
   const trimmed = message.trim();
@@ -578,7 +579,12 @@ export async function sendAdminReplyApi(
     const res = await fetch(`${API_BASE}/support/reply`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ conversationId: numConvId, message: trimmed }),
+      body: JSON.stringify({
+        conversationId: numConvId,
+        customerId: customerId ? Number(customerId) : undefined,
+        message: trimmed,
+        senderId: 1,
+      }),
     });
     if (res.ok) {
       const data = await res.json();
@@ -642,7 +648,11 @@ export async function sendAdminReplyApi(
         const rawVal = rows[0].value;
         const list = typeof rawVal === "string" ? JSON.parse(rawVal) : rawVal;
         if (Array.isArray(list)) {
-          const conv = list.find((c: any) => Number(c.id) === numConvId);
+          const conv = list.find(
+            (c: any) =>
+              Number(c.id) === numConvId ||
+              (customerId && Number(c.customerId) === Number(customerId))
+          );
           if (conv) {
             conv.lastMessage = newMsg;
             conv.lastMessageAt = now;
