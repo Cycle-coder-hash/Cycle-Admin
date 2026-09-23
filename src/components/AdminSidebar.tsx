@@ -3,7 +3,7 @@ import {
   LayoutDashboard,
   FileCheck2,
   Users,
-  ShieldCheck,
+  MessageSquare,
   KeyRound,
   Shield,
   BookOpen,
@@ -16,6 +16,7 @@ interface AdminSidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   pendingOrdersCount?: number;
+  unreadMessagesCount?: number;
   openTicketsCount?: number;
 }
 
@@ -23,8 +24,11 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   activeTab,
   onTabChange,
   pendingOrdersCount = 0,
+  unreadMessagesCount,
   openTicketsCount = 0,
 }) => {
+  const displayUnread = unreadMessagesCount !== undefined ? unreadMessagesCount : openTicketsCount;
+
   const menuItems = [
     { id: "overview", label: "Executive KPI", icon: LayoutDashboard },
     {
@@ -37,9 +41,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     { id: "ebooks", label: "Free eBooks & PDFs", icon: BookOpen },
     {
       id: "support",
-      label: "Support Desk",
-      icon: ShieldCheck,
-      badge: openTicketsCount > 0 ? `${openTicketsCount}` : undefined,
+      label: "Support Messages",
+      icon: MessageSquare,
+      badge: displayUnread > 0 ? `${displayUnread}` : undefined,
     },
     { id: "owner", label: "Owner Profile CMS", icon: UserCheck },
     { id: "settings", label: "Gateways & Notice", icon: KeyRound },

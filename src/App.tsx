@@ -4,18 +4,18 @@ import { AdminSidebar } from "./components/AdminSidebar";
 import { DashboardOverview } from "./pages/DashboardOverview";
 import { PaymentApprovals } from "./pages/PaymentApprovals";
 import { StudentManagement } from "./pages/StudentManagement";
-import { SupportTickets } from "./pages/SupportTickets";
+import { SupportMessages } from "./pages/SupportMessages";
 import { PlatformSettings } from "./pages/PlatformSettings";
 import { AuditLogs } from "./pages/AuditLogs";
 import { EbookManagement } from "./pages/EbookManagement";
 import { OwnerProfileCMS, OwnerProfileData } from "./pages/OwnerProfileCMS";
 import { EbookModal, EbookFormData } from "./modals/EbookModal";
 import { DeleteEbookModal } from "./modals/DeleteEbookModal";
-import { Order, Student, SupportTicket, AuditEvent } from "./lib/types";
+import { Order, Student, SupportConversation, AuditEvent } from "./lib/types";
 import {
   fetchAdminOrders,
   fetchAdminUsers,
-  fetchAdminTickets,
+  fetchSupportConversationsApi,
   fetchAdminAuditLogs,
   fetchAdminEbooks,
   fetchOwnerProfileApi,
@@ -24,7 +24,6 @@ import {
   deleteOrderApi,
   grantAccessApi,
   updateRoleApi,
-  updateTicketStatusApi,
   createEbookApi,
   updateEbookApi,
   deleteEbookApi,
@@ -90,7 +89,7 @@ export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [orders, setOrders] = useState<Order[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
-  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [conversations, setConversations] = useState<SupportConversation[]>([]);
   const [logs, setLogs] = useState<AuditEvent[]>([]);
   const [ebooks, setEbooks] = useState<any[]>([]);
   const [ownerProfile, setOwnerProfile] = useState<OwnerProfileData>(initialOwnerProfile);
@@ -114,10 +113,10 @@ export const App: React.FC = () => {
   const loadLiveData = useCallback(async () => {
     try {
       setLoading(true);
-      const [ordersData, usersData, ticketsData, logsData, ebooksData, ownerData, paymentData] = await Promise.allSettled([
+      const [ordersData, usersData, conversationsData, logsData, ebooksData, ownerData, paymentData] = await Promise.allSettled([
         fetchAdminOrders(),
         fetchAdminUsers(),
-        fetchAdminTickets(),
+        fetchSupportConversationsApi(),
         fetchAdminAuditLogs(),
         fetchAdminEbooks(),
         fetchOwnerProfileApi(),
@@ -126,7 +125,7 @@ export const App: React.FC = () => {
 
       if (ordersData.status === "fulfilled") setOrders(ordersData.value);
       if (usersData.status === "fulfilled") setStudents(usersData.value);
-      if (ticketsData.status === "fulfilled") setTickets(ticketsData.value);
+      if (conversationsData.status === "fulfilled") setConversations(conversationsData.value);
       if (logsData.status === "fulfilled") setLogs(logsData.value);
       if (ebooksData.status === "fulfilled") setEbooks(ebooksData.value);
       if (ownerData.status === "fulfilled" && ownerData.value) {
@@ -202,17 +201,6 @@ export const App: React.FC = () => {
       loadLiveData();
     } catch (err: any) {
       alert("Failed to update role: " + err.message);
-    }
-  };
-
-  const handleUpdateTicketStatus = async (ticketId: number, status: string) => {
-    try {
-      await updateTicketStatusApi(ticketId, status);
-      setActionSuccess("Support ticket status updated in DB.");
-      setTimeout(() => setActionSuccess(null), 4000);
-      loadLiveData();
-    } catch (err: any) {
-      alert("Failed to update ticket: " + err.message);
     }
   };
 
@@ -372,7 +360,7 @@ export const App: React.FC = () => {
   };
 
   const pendingOrdersCount = orders.filter((o) => o.orderStatus === "pending").length;
-  const openTicketsCount = tickets.filter((t) => t.status === "open").length;
+  const unreadMessagesCount = conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
 
   const tabTitles: Record<string, string> = {
     overview: "Executive Performance Overview",
@@ -380,7 +368,7 @@ export const App: React.FC = () => {
     students: "Student & Access Management",
     ebooks: "Free eBooks & PDF Library CMS",
     owner: "Owner & Founder Profile CMS",
-    support: "Student Support Desk",
+    support: "Customer Support Messages",
     settings: "Gateway & Platform Settings",
     audit: "Security & Audit Event Trail",
   };
@@ -391,7 +379,7 @@ export const App: React.FC = () => {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         pendingOrdersCount={pendingOrdersCount}
-        openTicketsCount={openTicketsCount}
+        unreadMessagesCount={unreadMessagesCount}
       />
 
       <div className="lg:pl-64 flex min-h-screen flex-col">
@@ -465,7 +453,7 @@ export const App: React.FC = () => {
             />
           )}
           {activeTab === "support" && (
-            <SupportTickets tickets={tickets} onUpdateStatus={handleUpdateTicketStatus} onReload={loadLiveData} />
+            <SupportMessages onReload={loadLiveData} />
           )}
           {activeTab === "settings" && (
             <PlatformSettings

@@ -1,5 +1,5 @@
-import { Order, Student, SupportTicket, SupportTicketReply, TicketInternalNote, SupportMetrics, AuditEvent, CourseTelegramConfig } from "./types";
-export type { CourseTelegramConfig, SupportTicketReply, TicketInternalNote, SupportMetrics };
+import { Order, Student, SupportConversation, SupportMessage, CustomerSupportContext, AuditEvent, CourseTelegramConfig } from "./types";
+export type { CourseTelegramConfig, SupportConversation, SupportMessage, CustomerSupportContext };
 
 const rawApiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL || "https://cycleofchart.vercel.app";
 const API_BASE = rawApiUrl.endsWith("/api/admin") 
@@ -140,103 +140,40 @@ export async function fetchAdminUsers(): Promise<Student[]> {
   return [];
 }
 
-export async function fetchAdminTickets(): Promise<SupportTicket[]> {
+export async function fetchSupportConversationsApi(): Promise<SupportConversation[]> {
   try {
-    const res = await fetch(`${API_BASE}/tickets`);
+    const res = await fetch(`${API_BASE}/support/conversations`);
     if (res.ok) {
       const data = await res.json();
-      if (data.success && Array.isArray(data.tickets)) return data.tickets;
+      if (data.success && Array.isArray(data.conversations)) {
+        return data.conversations;
+      }
     }
   } catch (err) {
-    console.warn("[API_BASE/tickets unreachable, falling back to direct Supabase]:", err);
+    console.warn("[API_BASE/support/conversations unreachable, trying direct Supabase]:", err);
   }
 
+  // Supabase fallback
   try {
-    const [tableRes, settingsRes] = await Promise.all([
-      supaFetch("supportTickets?select=*&order=id.desc"),
-      supaFetch("settings?key=eq.global_support_tickets_registry&select=value"),
-    ]);
-    const ticketsMap = new Map<number, SupportTicket>();
-
-    // 1. Process global_support_tickets_registry as primary source of truth
-    let registryTickets: SupportTicket[] = [];
-    if (settingsRes.ok) {
-      const rows = await settingsRes.json();
-      if (rows.length > 0 && Array.isArray(rows[0]?.value)) {
-        registryTickets = rows[0].value;
+    const res = await supaFetch("settings?key=eq.support_conversations_registry&select=value");
+    if (res.ok) {
+      const rows = await res.json();
+      if (rows && rows[0]?.value && Array.isArray(rows[0].value)) {
+        return rows[0].value;
       }
     }
-
-    const registryById = new Map<number, SupportTicket>();
-    const registryByCode = new Map<string, SupportTicket>();
-    registryTickets.forEach((t) => {
-      registryById.set(t.id, t);
-      if (t.ticketCode) {
-        registryByCode.set(t.ticketCode.trim().toLowerCase(), t);
-      }
-    });
-
-    // 2. Fetch table rows
-    let tableTickets: any[] = [];
-    if (tableRes.ok) {
-      const data = await tableRes.json();
-      if (Array.isArray(data)) tableTickets = data;
-    }
-
-    // 3. For each table row, deduplicate against registry
-    tableTickets.forEach((row: any) => {
-      const codeMatch = row.subject ? row.subject.match(/#TKT-(\d+)/i) : null;
-      let matchedRegTicket: SupportTicket | undefined;
-
-      if (registryById.has(row.id)) {
-        matchedRegTicket = registryById.get(row.id);
-      } else if (codeMatch) {
-        const fullCode = `#TKT-${codeMatch[1]}`.toLowerCase();
-        matchedRegTicket = registryByCode.get(fullCode);
-        if (!matchedRegTicket) {
-          const numId = Number(codeMatch[1]);
-          matchedRegTicket = registryById.get(numId);
-        }
-      }
-
-      if (matchedRegTicket) {
-        const merged: SupportTicket = {
-          ...matchedRegTicket,
-          status: row.status || matchedRegTicket.status,
-          updatedAt: row.updatedAt || matchedRegTicket.updatedAt,
-        };
-        ticketsMap.set(matchedRegTicket.id, merged);
-      } else {
-        ticketsMap.set(row.id, {
-          id: row.id,
-          ticketCode: `#TKT-${row.id}`,
-          userId: row.userId,
-          subject: row.subject,
-          message: row.message,
-          category: "General",
-          priority: "medium",
-          status: row.status || "open",
-          createdAt: row.createdAt || new Date().toISOString(),
-          updatedAt: row.updatedAt || row.createdAt || new Date().toISOString(),
-        });
-      }
-    });
-
-    // 4. Add any registry tickets that were not matched by table rows
-    registryTickets.forEach((t) => {
-      if (!ticketsMap.has(t.id)) {
-        ticketsMap.set(t.id, t);
-      }
-    });
-
-    return Array.from(ticketsMap.values()).sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
   } catch (err) {
-    console.warn("[fetchAdminTickets error]:", err);
+    console.warn("[fetchSupportConversationsApi Supabase error]:", err);
   }
+
   return [];
 }
+
+// Backward-compatibility alias
+export async function fetchAdminTickets(): Promise<any[]> {
+  return fetchSupportConversationsApi();
+}
+
 
 export async function fetchAdminAuditLogs(): Promise<AuditEvent[]> {
   try {
@@ -440,471 +377,272 @@ export async function updateRoleApi(userId: number, role: "user" | "support" | "
   }
 }
 
-export async function updateTicketStatusApi(ticketId: number, status: string) {
+export async function markConversationReadApi(conversationId: number): Promise<{ success: boolean }> {
   try {
-    const res = await fetch(`${API_BASE}/update-ticket`, {
+    const res = await fetch(`${API_BASE}/support/mark-read`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ticketId, status }),
+      body: JSON.stringify({ conversationId }),
     });
     if (res.ok) {
       const data = await res.json();
       if (data.success) return data;
     }
   } catch (err) {
-    console.warn("[updateTicketStatusApi primary failed, trying Supabase direct]:", err);
+    console.warn("[markConversationReadApi primary failed, trying direct Supabase]:", err);
   }
 
+  // Supabase fallback: update support_conversations_registry & support_messages_{id}
   try {
     const now = new Date().toISOString();
-    // 1. Update SQL table
-    try {
-      await supaFetch(`supportTickets?id=eq.${ticketId}`, {
-        method: "PATCH",
-        body: JSON.stringify({ status, updatedAt: now }),
-      });
-    } catch {}
-
-    try {
-      await supaFetch(`supportTickets?subject=ilike.*%23TKT-${ticketId}*`, {
-        method: "PATCH",
-        body: JSON.stringify({ status, updatedAt: now }),
-      });
-    } catch {}
-
-    // 2. Update global_support_tickets_registry
-    try {
-      const regRes = await supaFetch("settings?key=eq.global_support_tickets_registry&select=value");
-      if (regRes.ok) {
-        const rows = await regRes.json();
-        if (rows.length > 0 && Array.isArray(rows[0]?.value)) {
-          const list = rows[0].value;
-          const idx = list.findIndex((t: any) => t.id === ticketId || t.ticketCode === `#TKT-${ticketId}`);
-          if (idx >= 0) {
-            list[idx].status = status;
-            list[idx].updatedAt = now;
-            await supaFetch("settings?key=eq.global_support_tickets_registry", {
-              method: "POST",
-              headers: { Prefer: "resolution=merge-duplicates" },
-              body: JSON.stringify({
-                key: "global_support_tickets_registry",
-                value: list,
-                updatedAt: now,
-              }),
-            });
-          }
+    const regRes = await supaFetch("settings?key=eq.support_conversations_registry&select=value");
+    if (regRes.ok) {
+      const rows = await regRes.json();
+      if (rows && rows[0]?.value && Array.isArray(rows[0].value)) {
+        const list: SupportConversation[] = rows[0].value;
+        const conv = list.find((c) => c.id === conversationId);
+        if (conv) {
+          conv.unreadCount = 0;
+          await supaFetch("settings?key=eq.support_conversations_registry", {
+            method: "POST",
+            headers: { Prefer: "resolution=merge-duplicates" },
+            body: JSON.stringify({
+              key: "support_conversations_registry",
+              value: list,
+              updatedAt: now,
+            }),
+          });
         }
       }
-    } catch {}
-
+    }
     return { success: true };
-  } catch (err: any) {
-    throw new Error(err.message || "Failed to update ticket");
+  } catch (err) {
+    console.warn("[markConversationReadApi Supabase error]:", err);
+    return { success: true };
   }
 }
 
-export async function fetchTicketDetailsApi(
-  ticketId: number
-): Promise<{ ticket: SupportTicket | null; replies: SupportTicketReply[]; internalNotes: TicketInternalNote[] }> {
+export async function fetchConversationMessagesApi(conversationId: number): Promise<SupportMessage[]> {
   try {
-    const res = await fetch(`${API_BASE}/tickets/${ticketId}`);
+    const res = await fetch(`${API_BASE}/support/conversations/${conversationId}/messages`);
     if (res.ok) {
       const data = await res.json();
-      if (data.success && data.ticket) {
-        return {
-          ticket: data.ticket,
-          replies: Array.isArray(data.replies) ? data.replies : [],
-          internalNotes: Array.isArray(data.internalNotes) ? data.internalNotes : [],
-        };
+      if (data.success && Array.isArray(data.messages)) {
+        return data.messages;
       }
     }
   } catch (err) {
-    console.warn("[API_BASE/tickets/:id unreachable, falling back to direct Supabase]:", err);
+    console.warn(`[API_BASE/support/conversations/${conversationId}/messages failed, trying Supabase]:`, err);
   }
 
   // Supabase fallback
   try {
-    const [ticketRes, regRes, repliesRes, notesRes] = await Promise.all([
-      supaFetch(`supportTickets?id=eq.${ticketId}&select=*`),
-      supaFetch("settings?key=eq.global_support_tickets_registry&select=value"),
-      supaFetch(`settings?key=eq.support_ticket_replies_${ticketId}&select=value`),
-      supaFetch(`settings?key=eq.support_ticket_notes_${ticketId}&select=value`),
+    const res = await supaFetch(`settings?key=eq.support_messages_${conversationId}&select=value`);
+    if (res.ok) {
+      const rows = await res.json();
+      if (rows && rows[0]?.value && Array.isArray(rows[0].value)) {
+        return rows[0].value;
+      }
+    }
+  } catch (err) {
+    console.warn("[fetchConversationMessagesApi Supabase error]:", err);
+  }
+
+  return [];
+}
+
+export async function sendAdminReplyApi(
+  conversationId: number,
+  message: string
+): Promise<{ success: boolean; message?: SupportMessage }> {
+  try {
+    const res = await fetch(`${API_BASE}/support/reply`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conversationId, message: message.trim() }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) return data;
+    }
+  } catch (err) {
+    console.warn("[sendAdminReplyApi primary failed, trying Supabase]:", err);
+  }
+
+  // Supabase fallback
+  try {
+    const now = new Date().toISOString();
+    const newMsg: SupportMessage = {
+      id: Date.now(),
+      conversationId,
+      senderId: 1, // Admin actor
+      senderRole: "admin",
+      message: message.trim(),
+      readAt: null,
+      createdAt: now,
+    };
+
+    // 1. Append message in support_messages_{conversationId}
+    const msgsRes = await supaFetch(`settings?key=eq.support_messages_${conversationId}&select=value`);
+    let msgs: SupportMessage[] = [];
+    if (msgsRes.ok) {
+      const rows = await msgsRes.json();
+      if (rows && rows[0]?.value && Array.isArray(rows[0].value)) {
+        msgs = rows[0].value;
+      }
+    }
+    msgs.push(newMsg);
+    await supaFetch(`settings?key=eq.support_messages_${conversationId}`, {
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates" },
+      body: JSON.stringify({
+        key: `support_messages_${conversationId}`,
+        value: msgs,
+        updatedAt: now,
+      }),
+    });
+
+    // 2. Update conversation registry
+    const regRes = await supaFetch("settings?key=eq.support_conversations_registry&select=value");
+    if (regRes.ok) {
+      const rows = await regRes.json();
+      if (rows && rows[0]?.value && Array.isArray(rows[0].value)) {
+        const list: SupportConversation[] = rows[0].value;
+        const conv = list.find((c) => c.id === conversationId);
+        if (conv) {
+          conv.lastMessage = newMsg;
+          conv.lastMessageAt = now;
+          conv.totalMessages = (conv.totalMessages || 0) + 1;
+          conv.updatedAt = now;
+          await supaFetch("settings?key=eq.support_conversations_registry", {
+            method: "POST",
+            headers: { Prefer: "resolution=merge-duplicates" },
+            body: JSON.stringify({
+              key: "support_conversations_registry",
+              value: list,
+              updatedAt: now,
+            }),
+          });
+        }
+      }
+    }
+
+    return { success: true, message: newMsg };
+  } catch (err: any) {
+    throw new Error(err.message || "Failed to send admin reply");
+  }
+}
+
+export async function fetchCustomerContextApi(customerId: number): Promise<CustomerSupportContext | null> {
+  try {
+    const res = await fetch(`${API_BASE}/support/customer-context/${customerId}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.context) {
+        return data.context as CustomerSupportContext;
+      }
+    }
+  } catch (err) {
+    console.warn(`[API_BASE/support/customer-context/${customerId} failed, trying Supabase]:`, err);
+  }
+
+  // Supabase fallback
+  try {
+    const [userRes, entitlementsRes, ordersRes] = await Promise.all([
+      supaFetch(`users?id=eq.${customerId}&select=*`),
+      supaFetch(`entitlements?userId=eq.${customerId}&select=*`),
+      supaFetch(`orders?customerId=eq.${customerId}&select=*&order=id.desc`),
     ]);
 
-    let ticket: SupportTicket | null = null;
-    let regTicket: SupportTicket | null = null;
+    let customer: any = { id: customerId, name: `Customer #${customerId}`, email: null, phone: null, role: "user", createdAt: null };
+    if (userRes.ok) {
+      const rows = await userRes.json();
+      if (rows && rows.length > 0) customer = rows[0];
+    }
 
-    if (regRes.ok) {
-      const regRows = await regRes.json();
-      if (regRows.length > 0 && Array.isArray(regRows[0]?.value)) {
-        regTicket = regRows[0].value.find((t: any) => t.id === ticketId || t.ticketCode === `#TKT-${ticketId}`) || null;
+    let entitlements: any[] = [];
+    if (entitlementsRes.ok) {
+      const rows = await entitlementsRes.json();
+      if (Array.isArray(rows)) {
+        entitlements = rows.map((e: any) => ({
+          id: e.id,
+          orderId: e.orderId,
+          productId: e.productId,
+          bundleId: e.bundleId,
+          scope: e.scope,
+          productTitle: e.scope?.startsWith("bundle:") ? "Full Master Bundle" : "Course / PDF Access",
+          grantedAt: e.createdAt || new Date().toISOString(),
+        }));
       }
     }
 
-    if (ticketRes.ok) {
-      const rows = await ticketRes.json();
-      if (Array.isArray(rows) && rows.length > 0) ticket = rows[0];
-    }
-
-    if (regTicket && ticket) {
-      ticket = { ...ticket, ...regTicket, status: ticket.status || regTicket.status };
-    } else if (regTicket && !ticket) {
-      ticket = regTicket;
-    } else if (ticket && !regTicket) {
-      ticket = {
-        ...ticket,
-        ticketCode: ticket.ticketCode || `#TKT-${ticket.id}`,
-        category: ticket.category || "General",
-        priority: ticket.priority || "medium",
-      };
-    }
-
-    let replies: SupportTicketReply[] = [];
-    if (repliesRes.ok) {
-      const replyRows = await repliesRes.json();
-      if (replyRows.length > 0 && Array.isArray(replyRows[0]?.value)) {
-        replies = replyRows[0].value;
-      }
-    }
-
-    // If replies empty, try alternate key by ticket code
-    if (replies.length === 0 && ticket?.ticketCode) {
-      const codeDigits = ticket.ticketCode.replace(/\D/g, "");
-      if (codeDigits && Number(codeDigits) !== ticketId) {
-        try {
-          const altRepliesRes = await supaFetch(`settings?key=eq.support_ticket_replies_${codeDigits}&select=value`);
-          if (altRepliesRes.ok) {
-            const altRows = await altRepliesRes.json();
-            if (altRows.length > 0 && Array.isArray(altRows[0]?.value)) {
-              replies = altRows[0].value;
-            }
+    let orders: any[] = [];
+    let totalSpend = 0;
+    if (ordersRes.ok) {
+      const rows = await ordersRes.json();
+      if (Array.isArray(rows)) {
+        orders = rows.map((o: any) => {
+          if (o.paymentStatus === "approved") {
+            totalSpend += parseFloat(o.amount) || 0;
           }
-        } catch {}
-      }
-    }
-
-    let internalNotes: TicketInternalNote[] = [];
-    if (notesRes.ok) {
-      const noteRows = await notesRes.json();
-      if (noteRows.length > 0 && Array.isArray(noteRows[0]?.value)) {
-        internalNotes = noteRows[0].value;
-      }
-    }
-
-    return { ticket, replies, internalNotes };
-  } catch (err) {
-    console.warn("[fetchTicketDetailsApi error]:", err);
-    return { ticket: null, replies: [], internalNotes: [] };
-  }
-}
-
-export async function replyTicketApi(
-  ticketId: number,
-  message: string,
-  status: string = "waiting_customer",
-  senderName: string = "Support Specialist",
-  attachmentUrl?: string
-): Promise<{ success: boolean; reply?: SupportTicketReply }> {
-  try {
-    const res = await fetch(`${API_BASE}/reply-ticket`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ticketId, message, status, senderName, attachmentUrl }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.success) return data;
-    }
-  } catch (err) {
-    console.warn("[replyTicketApi primary failed, trying Supabase direct]:", err);
-  }
-
-  // Supabase fallback
-  try {
-    const now = new Date().toISOString();
-
-    // 1. Update status in table
-    try {
-      await supaFetch(`supportTickets?id=eq.${ticketId}`, {
-        method: "PATCH",
-        body: JSON.stringify({ status, assignedStaff: senderName, updatedAt: now }),
-      });
-    } catch {}
-
-    try {
-      await supaFetch(`supportTickets?subject=ilike.*%23TKT-${ticketId}*`, {
-        method: "PATCH",
-        body: JSON.stringify({ status, assignedStaff: senderName, updatedAt: now }),
-      });
-    } catch {}
-
-    // 2. Update status in settings registry
-    let ticketCode = `#TKT-${ticketId}`;
-    try {
-      const regRes = await supaFetch("settings?key=eq.global_support_tickets_registry&select=value");
-      if (regRes.ok) {
-        const rows = await regRes.json();
-        if (rows.length > 0 && Array.isArray(rows[0]?.value)) {
-          const list = rows[0].value;
-          const idx = list.findIndex((t: any) => t.id === ticketId || t.ticketCode === `#TKT-${ticketId}`);
-          if (idx >= 0) {
-            list[idx].status = status;
-            list[idx].assignedStaff = senderName;
-            list[idx].updatedAt = now;
-            ticketCode = list[idx].ticketCode || ticketCode;
-            await supaFetch("settings?key=eq.global_support_tickets_registry", {
-              method: "POST",
-              headers: { Prefer: "resolution=merge-duplicates" },
-              body: JSON.stringify({
-                key: "global_support_tickets_registry",
-                value: list,
-                updatedAt: now,
-              }),
-            });
-          }
-        }
-      }
-    } catch {}
-
-    // 3. Append reply to settings key
-    const repliesRes = await supaFetch(`settings?key=eq.support_ticket_replies_${ticketId}&select=value`);
-    let replies: any[] = [];
-    if (repliesRes.ok) {
-      const rows = await repliesRes.json();
-      if (rows.length > 0 && Array.isArray(rows[0]?.value)) {
-        replies = rows[0].value;
-      }
-    }
-
-    const newReply: SupportTicketReply = {
-      id: Date.now(),
-      ticketId,
-      senderRole: "support",
-      senderName,
-      senderEmail: "support@cycleofchart.com",
-      message: message.trim(),
-      attachmentUrl: attachmentUrl || null,
-      createdAt: now,
-    };
-    replies.push(newReply);
-
-    await supaFetch(`settings?key=eq.support_ticket_replies_${ticketId}`, {
-      method: "POST",
-      headers: { Prefer: "resolution=merge-duplicates" },
-      body: JSON.stringify({
-        key: `support_ticket_replies_${ticketId}`,
-        value: replies,
-        updatedAt: now,
-      }),
-    });
-
-    // Also mirror to alternate ticket code ID key if different
-    const codeDigits = ticketCode.replace(/\D/g, "");
-    if (codeDigits && Number(codeDigits) !== ticketId) {
-      try {
-        await supaFetch(`settings?key=eq.support_ticket_replies_${codeDigits}`, {
-          method: "POST",
-          headers: { Prefer: "resolution=merge-duplicates" },
-          body: JSON.stringify({
-            key: `support_ticket_replies_${codeDigits}`,
-            value: replies,
-            updatedAt: now,
-          }),
+          return {
+            id: o.id,
+            amount: o.amount || "0",
+            currency: o.currency || "BDT",
+            paymentMethod: o.paymentMethod || "bkash",
+            paymentStatus: o.paymentStatus || "pending",
+            orderStatus: o.orderStatus || "pending",
+            bundleId: o.bundleId,
+            productId: o.productId,
+            selectedPdfIds: o.selectedPdfIds,
+            createdAt: o.createdAt || new Date().toISOString(),
+          };
         });
-      } catch {}
-    }
-
-    return { success: true, reply: newReply };
-  } catch (err: any) {
-    throw new Error(err.message || "Failed to submit reply");
-  }
-}
-
-export async function addTicketInternalNoteApi(
-  ticketId: number,
-  note: string,
-  authorName: string = "Staff Specialist",
-  authorEmail?: string,
-  authorRole: string = "admin"
-): Promise<{ success: boolean; note?: TicketInternalNote }> {
-  try {
-    const res = await fetch(`${API_BASE}/tickets/internal-note`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ticketId, note, authorName, authorEmail, authorRole }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.success) return data;
-    }
-  } catch (err) {
-    console.warn("[addTicketInternalNoteApi primary failed, trying Supabase direct]:", err);
-  }
-
-  // Supabase fallback
-  try {
-    const now = new Date().toISOString();
-    const notesRes = await supaFetch(`settings?key=eq.support_ticket_notes_${ticketId}&select=value`);
-    let notes: TicketInternalNote[] = [];
-    if (notesRes.ok) {
-      const rows = await notesRes.json();
-      if (rows.length > 0 && Array.isArray(rows[0]?.value)) {
-        notes = rows[0].value;
       }
     }
 
-    const newNote: TicketInternalNote = {
-      id: Date.now(),
-      ticketId,
-      authorName,
-      authorEmail: authorEmail || null,
-      authorRole,
-      content: note.trim(),
-      createdAt: now,
+    return {
+      customer: {
+        id: customer.id,
+        openId: customer.openId,
+        name: customer.name || `Customer #${customer.id}`,
+        email: customer.email,
+        phone: customer.phone,
+        avatar: customer.avatar,
+        role: customer.role || "user",
+        createdAt: customer.createdAt,
+      },
+      entitlements,
+      orders,
+      stats: {
+        totalSpend,
+        totalOrders: orders.length,
+        activeEntitlementsCount: entitlements.length,
+      },
     };
-    notes.push(newNote);
-
-    await supaFetch(`settings?key=eq.support_ticket_notes_${ticketId}`, {
-      method: "POST",
-      headers: { Prefer: "resolution=merge-duplicates" },
-      body: JSON.stringify({
-        key: `support_ticket_notes_${ticketId}`,
-        value: notes,
-        updatedAt: now,
-      }),
-    });
-
-    return { success: true, note: newNote };
-  } catch (err: any) {
-    throw new Error(err.message || "Failed to add internal note");
-  }
-}
-
-export async function updateTicketPriorityApi(
-  ticketId: number,
-  priority: string
-): Promise<{ success: boolean; priority?: string }> {
-  try {
-    const res = await fetch(`${API_BASE}/tickets/priority`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ticketId, priority }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.success) return data;
-    }
   } catch (err) {
-    console.warn("[updateTicketPriorityApi primary failed, trying Supabase direct]:", err);
-  }
-
-  try {
-    const now = new Date().toISOString();
-    await supaFetch(`supportTickets?id=eq.${ticketId}`, {
-      method: "PATCH",
-      body: JSON.stringify({ priority, updatedAt: now }),
-    });
-
-    try {
-      const regRes = await supaFetch("settings?key=eq.global_support_tickets_registry&select=value");
-      if (regRes.ok) {
-        const rows = await regRes.json();
-        if (rows.length > 0 && Array.isArray(rows[0]?.value)) {
-          const list = rows[0].value;
-          const idx = list.findIndex((t: any) => t.id === ticketId);
-          if (idx >= 0) {
-            list[idx].priority = priority;
-            list[idx].updatedAt = now;
-            await supaFetch("settings?key=eq.global_support_tickets_registry", {
-              method: "POST",
-              headers: { Prefer: "resolution=merge-duplicates" },
-              body: JSON.stringify({
-                key: "global_support_tickets_registry",
-                value: list,
-                updatedAt: now,
-              }),
-            });
-          }
-        }
-      }
-    } catch {}
-
-    return { success: true, priority };
-  } catch (err: any) {
-    throw new Error(err.message || "Failed to update ticket priority");
+    console.warn("[fetchCustomerContextApi Supabase error]:", err);
+    return null;
   }
 }
 
-export async function assignTicketStaffApi(
-  ticketId: number,
-  staffName: string,
-  staffId?: number | null
-): Promise<{ success: boolean; assignedStaff?: string }> {
-  try {
-    const res = await fetch(`${API_BASE}/tickets/assign`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ticketId, staffName, staffId }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.success) return data;
-    }
-  } catch (err) {
-    console.warn("[assignTicketStaffApi primary failed, trying Supabase direct]:", err);
-  }
-
-  try {
-    const now = new Date().toISOString();
-    await supaFetch(`supportTickets?id=eq.${ticketId}`, {
-      method: "PATCH",
-      body: JSON.stringify({ assignedStaff: staffName, updatedAt: now }),
-    });
-
-    try {
-      const regRes = await supaFetch("settings?key=eq.global_support_tickets_registry&select=value");
-      if (regRes.ok) {
-        const rows = await regRes.json();
-        if (rows.length > 0 && Array.isArray(rows[0]?.value)) {
-          const list = rows[0].value;
-          const idx = list.findIndex((t: any) => t.id === ticketId);
-          if (idx >= 0) {
-            list[idx].assignedStaff = staffName;
-            list[idx].updatedAt = now;
-            await supaFetch("settings?key=eq.global_support_tickets_registry", {
-              method: "POST",
-              headers: { Prefer: "resolution=merge-duplicates" },
-              body: JSON.stringify({
-                key: "global_support_tickets_registry",
-                value: list,
-                updatedAt: now,
-              }),
-            });
-          }
-        }
-      }
-    } catch {}
-
-    return { success: true, assignedStaff: staffName };
-  } catch (err: any) {
-    throw new Error(err.message || "Failed to assign staff to ticket");
-  }
+// Backward-compatibility shims
+export async function updateTicketStatusApi(_ticketId: number, _status: string) {
+  return { success: true };
 }
 
-export async function fetchSupportMetricsApi(): Promise<SupportMetrics | null> {
-  try {
-    const res = await fetch(`${API_BASE}/support-metrics`);
-    if (res.ok) {
-      const data = await res.json();
-      if (data.success && data.metrics) {
-        return data.metrics as SupportMetrics;
-      }
-    }
-  } catch (err) {
-    console.warn("[fetchSupportMetricsApi primary failed]:", err);
-  }
-  return null;
+export async function fetchSupportMetricsApi() {
+  return {
+    totalTickets: 0,
+    openTickets: 0,
+    pendingTickets: 0,
+    waitingUserTickets: 0,
+    resolvedTickets: 0,
+    closedTickets: 0,
+    avgResolutionHours: 0,
+  };
 }
+
 
 export async function fetchAdminEbooks(): Promise<any[]> {
   try {

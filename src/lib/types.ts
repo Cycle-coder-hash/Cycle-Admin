@@ -28,65 +28,72 @@ export interface Student {
   createdAt: string | Date;
 }
 
-export interface SupportTicket {
+export interface SupportMessage {
   id: number;
-  userId?: number | null;
-  ticketCode?: string;
-  userName?: string;
-  userEmail?: string;
-  category?: string;
-  priority?: "low" | "medium" | "high" | "urgent" | string;
-  subject: string;
+  conversationId: number;
+  senderId: number;
+  senderRole: "customer" | "admin" | "support" | "user";
   message: string;
-  status: "open" | "pending" | "in_progress" | "waiting_customer" | "waiting_user" | "solved" | "resolved" | "closed" | string;
-  attachmentUrl?: string | null;
-  assignedStaff?: string | null;
-  firstResponseAt?: string | Date | null;
-  lastReplyAt?: string | Date | null;
-  solvedAt?: string | Date | null;
-  closedAt?: string | Date | null;
-  createdAt: string | Date;
-  updatedAt?: string | Date;
+  readAt?: string | null;
+  createdAt: string;
 }
 
-export interface SupportTicketReply {
+export interface SupportConversation {
   id: number;
-  ticketId: number;
-  senderRole: "user" | "support" | "admin";
-  senderName: string;
-  senderEmail?: string;
-  message: string;
-  attachmentUrl?: string | null;
-  createdAt: string | Date;
-}
-
-export interface TicketInternalNote {
-  id: number;
-  ticketId: number;
-  authorId?: number | null;
-  authorName: string;
-  authorEmail?: string | null;
-  authorRole?: string;
-  content: string;
-  createdAt: string | Date;
-}
-
-export interface SupportMetrics {
-  total: number;
-  open: number;
-  pending: number;
-  inProgress: number;
-  waitingCustomer: number;
-  solved: number;
-  closed: number;
-  priorities: {
-    low: number;
-    medium: number;
-    high: number;
-    urgent: number;
+  customerId: number;
+  createdAt: string;
+  updatedAt: string;
+  lastMessageAt: string | null;
+  customer?: {
+    id: number;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    avatar: string | null;
+    createdAt: string | null;
   };
-  avgResponseMinutes: number;
-  avgResolutionHours: number;
+  lastMessage?: SupportMessage | null;
+  unreadCount: number;
+  totalMessages: number;
+}
+
+export interface CustomerSupportContext {
+  customer: {
+    id: number;
+    openId?: string;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    avatar: string | null;
+    role: string;
+    createdAt: string | null;
+  };
+  entitlements: Array<{
+    id: number;
+    orderId?: number;
+    productId?: number;
+    bundleId?: number;
+    scope: string;
+    productTitle?: string;
+    grantedAt: string;
+  }>;
+  orders: Array<{
+    id: number;
+    amount: string;
+    currency: string;
+    paymentMethod: string;
+    paymentStatus: string;
+    orderStatus: string;
+    bundleId?: number | null;
+    productId?: number | null;
+    selectedPdfIds?: number[];
+    createdAt: string;
+  }>;
+  stats: {
+    totalSpend: number;
+    totalOrders: number;
+    activeEntitlementsCount: number;
+  };
 }
 
 export interface AuditEvent {
