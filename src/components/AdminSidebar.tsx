@@ -8,6 +8,7 @@ import {
   Shield,
   BookOpen,
   UserCheck,
+  Trophy,
   LogOut,
   ExternalLink,
 } from "lucide-react";
@@ -47,6 +48,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     },
     { id: "owner", label: "Owner Profile CMS", icon: UserCheck },
     { id: "settings", label: "Gateways & Notice", icon: KeyRound },
+    { id: "leaderboard", label: "Leaderboard Matrix", icon: Trophy },
     { id: "audit", label: "Audit Trail", icon: Shield },
   ];
 

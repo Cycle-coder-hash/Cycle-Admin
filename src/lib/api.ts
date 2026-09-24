@@ -1367,3 +1367,106 @@ export async function updateCourseTelegramConfigApi(config: CourseTelegramConfig
 
   return result;
 }
+
+export interface LeaderboardWeightsConfig {
+  ruleAdherence: number;
+  disciplineRoutine: number;
+  winRate: number;
+  consistency: number;
+  profitFactor: number;
+  updatedAt?: string;
+}
+
+export const defaultLeaderboardWeights: LeaderboardWeightsConfig = {
+  ruleAdherence: 25,
+  disciplineRoutine: 25,
+  winRate: 20,
+  consistency: 15,
+  profitFactor: 15,
+};
+
+export async function fetchLeaderboardWeightsApi(): Promise<LeaderboardWeightsConfig> {
+  try {
+    const res = await fetch(`${API_BASE}/leaderboard-settings`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.weights) {
+        return {
+          ...defaultLeaderboardWeights,
+          ...data.weights,
+        };
+      }
+    }
+  } catch (err) {
+    console.warn("[fetchLeaderboardWeightsApi API_BASE failed, reading Supabase settings]:", err);
+  }
+
+  try {
+    const res = await supaFetch("settings?key=eq.leaderboard_settings&select=value");
+    if (res.ok) {
+      const rows = await res.json();
+      if (rows && rows[0]?.value) {
+        const parsed = typeof rows[0].value === "string" ? JSON.parse(rows[0].value) : rows[0].value;
+        return {
+          ...defaultLeaderboardWeights,
+          ...parsed,
+        };
+      }
+    }
+  } catch (err) {
+    console.warn("[fetchLeaderboardWeightsApi Supabase fallback failed]:", err);
+  }
+
+  return defaultLeaderboardWeights;
+}
+
+export async function updateLeaderboardWeightsApi(weights: LeaderboardWeightsConfig): Promise<LeaderboardWeightsConfig> {
+  let result = { ...weights };
+  try {
+    const res = await fetch(`${API_BASE}/leaderboard-settings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(weights),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.weights) {
+        result = data.weights;
+      }
+    }
+  } catch (err) {
+    console.warn("[updateLeaderboardWeightsApi API_BASE failed, writing to Supabase directly]:", err);
+  }
+
+  try {
+    await supaFetch("settings?on_conflict=key", {
+      method: "POST",
+      headers: { "Prefer": "resolution=merge-duplicates" },
+      body: JSON.stringify({
+        key: "leaderboard_settings",
+        value: JSON.stringify(result),
+      }),
+    });
+  } catch (err) {
+    console.warn("[updateLeaderboardWeightsApi Supabase direct upsert error]:", err);
+  }
+
+  return result;
+}
+
+export async function recalculateLeaderboardApi(): Promise<{ success: boolean; count?: number; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE}/leaderboard/recalculate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, count: data.count };
+    }
+  } catch (err: any) {
+    console.warn("[recalculateLeaderboardApi error]:", err);
+    return { success: false, error: err.message };
+  }
+  return { success: true };
+}

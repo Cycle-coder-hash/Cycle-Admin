@@ -9,6 +9,7 @@ import { PlatformSettings } from "./pages/PlatformSettings";
 import { AuditLogs } from "./pages/AuditLogs";
 import { EbookManagement } from "./pages/EbookManagement";
 import { OwnerProfileCMS, OwnerProfileData } from "./pages/OwnerProfileCMS";
+import { LeaderboardSettings } from "./pages/LeaderboardSettings";
 import { EbookModal, EbookFormData } from "./modals/EbookModal";
 import { DeleteEbookModal } from "./modals/DeleteEbookModal";
 import { Order, Student, SupportConversation, AuditEvent } from "./lib/types";
@@ -370,6 +371,7 @@ export const App: React.FC = () => {
     owner: "Owner & Founder Profile CMS",
     support: "Customer Support Messages",
     settings: "Gateway & Platform Settings",
+    leaderboard: "Global Leaderboard Scoring Matrix",
     audit: "Security & Audit Event Trail",
   };
 
@@ -463,6 +465,7 @@ export const App: React.FC = () => {
               isSaving={isSavingPayment}
             />
           )}
+          {activeTab === "leaderboard" && <LeaderboardSettings />}
           {activeTab === "audit" && <AuditLogs logs={logs} />}
         </main>
       </div>
