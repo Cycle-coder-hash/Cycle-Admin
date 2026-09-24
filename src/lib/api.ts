@@ -481,7 +481,7 @@ export async function markConversationReadApi(conversationId: number): Promise<{
             }
           }
           if (modified) {
-            await supaFetch(`settings?key=eq.support_messages_${numId}`, {
+            await supaFetch("settings?on_conflict=key", {
               method: "POST",
               headers: { Prefer: "resolution=merge-duplicates" },
               body: JSON.stringify({
@@ -506,7 +506,7 @@ export async function markConversationReadApi(conversationId: number): Promise<{
           const conv = list.find((c: any) => Number(c.id) === numId);
           if (conv) {
             conv.unreadCount = 0;
-            await supaFetch("settings?key=eq.support_conversations_registry", {
+            await supaFetch("settings?on_conflict=key", {
               method: "POST",
               headers: { Prefer: "resolution=merge-duplicates" },
               body: JSON.stringify({
@@ -615,6 +615,13 @@ export async function sendAdminReplyApi(
       }
     }
 
+    // Auto mark all unread customer messages as read when admin replies
+    for (const m of msgs) {
+      if (m.senderRole !== "admin" && !m.readAt) {
+        m.readAt = now;
+      }
+    }
+
     let maxId = 0;
     for (const m of msgs) {
       if (Number(m.id) > maxId) maxId = Number(m.id);
@@ -630,7 +637,7 @@ export async function sendAdminReplyApi(
     };
 
     msgs.push(newMsg);
-    await supaFetch(`settings?key=eq.support_messages_${numConvId}`, {
+    await supaFetch("settings?on_conflict=key", {
       method: "POST",
       headers: { Prefer: "resolution=merge-duplicates" },
       body: JSON.stringify({
@@ -656,9 +663,10 @@ export async function sendAdminReplyApi(
           if (conv) {
             conv.lastMessage = newMsg;
             conv.lastMessageAt = now;
-            conv.totalMessages = (conv.totalMessages || 0) + 1;
+            conv.totalMessages = msgs.length;
+            conv.unreadCount = 0;
             conv.updatedAt = now;
-            await supaFetch("settings?key=eq.support_conversations_registry", {
+            await supaFetch("settings?on_conflict=key", {
               method: "POST",
               headers: { Prefer: "resolution=merge-duplicates" },
               body: JSON.stringify({
@@ -675,6 +683,139 @@ export async function sendAdminReplyApi(
     return { success: true, message: newMsg };
   } catch (err: any) {
     throw new Error(err.message || "Failed to send admin reply");
+  }
+}
+
+export async function deleteSupportMessageApi(
+  conversationId: number,
+  messageId: number
+): Promise<{ success: boolean }> {
+  const numConvId = Number(conversationId);
+  const numMsgId = Number(messageId);
+  try {
+    const res = await fetch(`${API_BASE}/support/delete-message`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conversationId: numConvId, messageId: numMsgId }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) return data;
+    }
+  } catch (err) {
+    console.warn("[deleteSupportMessageApi primary failed, trying Supabase]:", err);
+  }
+
+  // Supabase direct fallback
+  try {
+    const now = new Date().toISOString();
+    const msgsRes = await supaFetch(`settings?key=eq.support_messages_${numConvId}&select=value`);
+    let msgs: SupportMessage[] = [];
+    if (msgsRes.ok) {
+      const rows = await msgsRes.json();
+      if (rows && rows[0]?.value) {
+        const rawVal = rows[0].value;
+        const parsed = typeof rawVal === "string" ? JSON.parse(rawVal) : rawVal;
+        if (Array.isArray(parsed)) msgs = parsed;
+      }
+    }
+    const filtered = msgs.filter((m) => Number(m.id) !== numMsgId);
+    await supaFetch("settings?on_conflict=key", {
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates" },
+      body: JSON.stringify({
+        key: `support_messages_${numConvId}`,
+        value: JSON.stringify(filtered),
+        updatedAt: now,
+      }),
+    });
+
+    const regRes = await supaFetch("settings?key=eq.support_conversations_registry&select=value");
+    if (regRes.ok) {
+      const rows = await regRes.json();
+      if (rows && rows[0]?.value) {
+        const rawVal = rows[0].value;
+        const list = typeof rawVal === "string" ? JSON.parse(rawVal) : rawVal;
+        if (Array.isArray(list)) {
+          const conv = list.find((c: any) => Number(c.id) === numConvId);
+          if (conv) {
+            const lastMsg = filtered.length > 0 ? filtered[filtered.length - 1] : null;
+            conv.lastMessage = lastMsg;
+            conv.lastMessageAt = lastMsg ? lastMsg.createdAt : conv.createdAt;
+            conv.totalMessages = filtered.length;
+            conv.unreadCount = filtered.filter(
+              (m: any) => (m.senderRole === "customer" || m.senderRole === "user") && !m.readAt
+            ).length;
+            conv.updatedAt = now;
+            await supaFetch("settings?on_conflict=key", {
+              method: "POST",
+              headers: { Prefer: "resolution=merge-duplicates" },
+              body: JSON.stringify({
+                key: "support_conversations_registry",
+                value: JSON.stringify(list),
+                updatedAt: now,
+              }),
+            });
+          }
+        }
+      }
+    }
+    return { success: true };
+  } catch (err: any) {
+    throw new Error(err.message || "Failed to delete support message");
+  }
+}
+
+export async function deleteSupportConversationApi(
+  conversationId: number
+): Promise<{ success: boolean }> {
+  const numConvId = Number(conversationId);
+  try {
+    const res = await fetch(`${API_BASE}/support/delete-conversation`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conversationId: numConvId }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) return data;
+    }
+  } catch (err) {
+    console.warn("[deleteSupportConversationApi primary failed, trying Supabase]:", err);
+  }
+
+  // Supabase direct fallback
+  try {
+    const now = new Date().toISOString();
+    // 1. Delete messages row
+    await supaFetch(`settings?key=eq.support_messages_${numConvId}`, {
+      method: "DELETE",
+    });
+
+    // 2. Remove from registry
+    const regRes = await supaFetch("settings?key=eq.support_conversations_registry&select=value");
+    if (regRes.ok) {
+      const rows = await regRes.json();
+      if (rows && rows[0]?.value) {
+        const rawVal = rows[0].value;
+        const list = typeof rawVal === "string" ? JSON.parse(rawVal) : rawVal;
+        if (Array.isArray(list)) {
+          const filtered = list.filter((c: any) => Number(c.id) !== numConvId);
+          await supaFetch("settings?on_conflict=key", {
+            method: "POST",
+            headers: { Prefer: "resolution=merge-duplicates" },
+            body: JSON.stringify({
+              key: "support_conversations_registry",
+              value: JSON.stringify(filtered),
+              updatedAt: now,
+            }),
+          });
+        }
+      }
+    }
+    return { success: true };
+  } catch (err: any) {
+    throw new Error(err.message || "Failed to delete support conversation");
   }
 }
 

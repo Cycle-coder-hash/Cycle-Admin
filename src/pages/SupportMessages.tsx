@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   MessageSquare,
+  Trash2,
   Search,
   Send,
   User,
@@ -32,6 +33,8 @@ import {
   sendAdminReplyApi,
   markConversationReadApi,
   fetchCustomerContextApi,
+  deleteSupportMessageApi,
+  deleteSupportConversationApi,
 } from "../lib/api";
 
 interface SupportMessagesProps {
@@ -157,6 +160,48 @@ export const SupportMessages: React.FC<SupportMessagesProps> = ({ onReload }) =>
   }, [selectedConversationId, activeConversation?.unreadCount, onReload]);
 
   // 5. Send Admin Reply
+    const [isDeletingConversation, setIsDeletingConversation] = useState(false);
+
+  const handleDeleteConversation = async () => {
+    if (!selectedConversationId) return;
+    const confirmDelete = window.confirm(
+      "Are you sure you want to permanently delete this conversation and all its messages from the database? This action cannot be undone."
+    );
+    if (!confirmDelete) return;
+
+    setIsDeletingConversation(true);
+    try {
+      await deleteSupportConversationApi(selectedConversationId);
+      const deletedId = selectedConversationId;
+      setConversations((prev) => prev.filter((c) => Number(c.id) !== Number(deletedId)));
+      setSelectedConversationId(null);
+      setMessages([]);
+      setCustomerContext(null);
+      await loadConversations(true);
+      if (onReload) onReload();
+    } catch (err: any) {
+      alert("Failed to delete conversation: " + (err.message || "Unknown error"));
+    } finally {
+      setIsDeletingConversation(false);
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: number) => {
+    if (!selectedConversationId) return;
+    const confirmDelete = window.confirm(
+      "Are you sure you want to permanently delete this message from the database?"
+    );
+    if (!confirmDelete) return;
+
+    try {
+      await deleteSupportMessageApi(selectedConversationId, messageId);
+      setMessages((prev) => prev.filter((m) => Number(m.id) !== Number(messageId)));
+      await loadConversations(true);
+    } catch (err: any) {
+      alert("Failed to delete message: " + (err.message || "Unknown error"));
+    }
+  };
+
   const handleSendReply = async () => {
     if (!selectedConversationId || !replyMessage.trim() || isSendingReply) return;
     const text = replyMessage.trim();
