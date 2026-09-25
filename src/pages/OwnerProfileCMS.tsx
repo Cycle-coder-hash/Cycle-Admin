@@ -23,8 +23,42 @@ import {
   Mail,
   Eye,
   EyeOff,
+  Share2,
+  CheckCircle2,
 } from "lucide-react";
 import { AnimatedRgbBorder } from "../components/AnimatedRgbBorder";
+
+export const TikTokIcon = ({ className = "size-4" }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64c.298-.002.595.042.88.13V9.4a6.33 6.33 0 0 0-1-.08A6.34 6.34 0 0 0 3 15.66a6.34 6.34 0 0 0 10.86 4.43 6.27 6.27 0 0 0 1.93-4.52V8.69a8.18 8.18 0 0 0 4.79 1.54V6.78a4.85 4.85 0 0 1-.99-.09Z" />
+  </svg>
+);
+
+export const YoutubeIcon = ({ className = "size-4" }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+  </svg>
+);
+
+export const InstagramIcon = ({ className = "size-4" }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+    <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+  </svg>
+);
+
+export const XTwitterIcon = ({ className = "size-4" }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  </svg>
+);
+
+export const FacebookIcon = ({ className = "size-4" }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+  </svg>
+);
 
 export interface OwnerProfileData {
   isVisible?: boolean;
@@ -42,7 +76,9 @@ export interface OwnerProfileData {
   signatureQuoteEn?: string;
   signatureQuoteBn?: string;
   telegram?: string;
+  tiktok?: string;
   youtube?: string;
+  instagram?: string;
   facebook?: string;
   twitter?: string;
   email?: string;
@@ -359,7 +395,129 @@ export const OwnerProfileCMS: React.FC<OwnerProfileCMSProps> = ({
               </div>
             </div>
 
-            {/* Submit */}
+            {/* SOCIAL MEDIA LINKS */}
+            <div className="rounded-3xl border border-slate-800 bg-[#070e1b] p-6 space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  <Share2 size={18} className="text-violet-400" />
+                  <div>
+                    <h3 className="text-xs font-black text-white uppercase tracking-wider">
+                      SOCIAL MEDIA LINKS
+                    </h3>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Enter the 5 centralized social-media links displayed in the Founder / About section. Empty links will be hidden.
+                    </p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-violet-500/15 text-violet-300 uppercase tracking-wider">
+                  Central Row
+                </span>
+              </div>
+
+              <div className="space-y-4 pt-2">
+                {/* 1. TikTok URL */}
+                <div>
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-300 mb-1">
+                    <span className="flex h-5 w-5 items-center justify-center rounded bg-slate-800 text-white">
+                      <TikTokIcon className="size-3" />
+                    </span>
+                    <span>TikTok URL</span>
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://tiktok.com/@cycleofchart"
+                    value={form.tiktok || ""}
+                    onChange={(e) => setForm((prev) => ({ ...prev, tiktok: e.target.value }))}
+                    className="w-full rounded-xl border border-slate-800 bg-slate-900 p-2.5 text-xs text-white placeholder:text-slate-500 outline-none focus:border-violet-500 font-mono"
+                  />
+                </div>
+
+                {/* 2. YouTube URL */}
+                <div>
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-300 mb-1">
+                    <span className="flex h-5 w-5 items-center justify-center rounded bg-rose-500/15 text-rose-400">
+                      <YoutubeIcon className="size-3" />
+                    </span>
+                    <span>YouTube URL</span>
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://youtube.com/@cycleofchart"
+                    value={form.youtube || ""}
+                    onChange={(e) => setForm((prev) => ({ ...prev, youtube: e.target.value }))}
+                    className="w-full rounded-xl border border-slate-800 bg-slate-900 p-2.5 text-xs text-white placeholder:text-slate-500 outline-none focus:border-violet-500 font-mono"
+                  />
+                </div>
+
+                {/* 3. Instagram URL */}
+                <div>
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-300 mb-1">
+                    <span className="flex h-5 w-5 items-center justify-center rounded bg-pink-500/15 text-pink-400">
+                      <InstagramIcon className="size-3" />
+                    </span>
+                    <span>Instagram URL</span>
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://instagram.com/cycleofchart"
+                    value={form.instagram || ""}
+                    onChange={(e) => setForm((prev) => ({ ...prev, instagram: e.target.value }))}
+                    className="w-full rounded-xl border border-slate-800 bg-slate-900 p-2.5 text-xs text-white placeholder:text-slate-500 outline-none focus:border-violet-500 font-mono"
+                  />
+                </div>
+
+                {/* 4. X / Twitter URL */}
+                <div>
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-300 mb-1">
+                    <span className="flex h-5 w-5 items-center justify-center rounded bg-sky-500/15 text-sky-400">
+                      <XTwitterIcon className="size-3" />
+                    </span>
+                    <span>X / Twitter URL</span>
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://x.com/cycleofchart"
+                    value={form.twitter || ""}
+                    onChange={(e) => setForm((prev) => ({ ...prev, twitter: e.target.value }))}
+                    className="w-full rounded-xl border border-slate-800 bg-slate-900 p-2.5 text-xs text-white placeholder:text-slate-500 outline-none focus:border-violet-500 font-mono"
+                  />
+                </div>
+
+                {/* 5. Facebook URL */}
+                <div>
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-300 mb-1">
+                    <span className="flex h-5 w-5 items-center justify-center rounded bg-blue-500/15 text-blue-400">
+                      <FacebookIcon className="size-3" />
+                    </span>
+                    <span>Facebook URL</span>
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://facebook.com/cycleofchart"
+                    value={form.facebook || ""}
+                    onChange={(e) => setForm((prev) => ({ ...prev, facebook: e.target.value }))}
+                    className="w-full rounded-xl border border-slate-800 bg-slate-900 p-2.5 text-xs text-white placeholder:text-slate-500 outline-none focus:border-violet-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Dedicated Save Button */}
+              <div className="pt-3 border-t border-slate-800 flex items-center justify-between">
+                <span className="text-[11px] text-slate-400">
+                  Save all 5 social links to database immediately.
+                </span>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="flex items-center gap-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 px-4 py-2 text-xs font-bold text-white shadow transition"
+                >
+                  {isSaving ? <RefreshCw size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
+                  <span>Save Social Media Links</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Primary Submit */}
             <button
               type="submit"
               disabled={isSaving}
@@ -464,6 +622,36 @@ export const OwnerProfileCMS: React.FC<OwnerProfileCMSProps> = ({
               <p className="text-xs text-slate-300 leading-relaxed pt-2">
                 {previewLang === "bn" && form.bioBn ? form.bioBn : form.bioEn || "Biography goes here..."}
               </p>
+
+              {/* Central Social Media Links in Preview */}
+              {(() => {
+                const previewSocials = [
+                  { key: "tiktok", label: "TikTok", url: form.tiktok, icon: TikTokIcon, color: "text-white bg-slate-800" },
+                  { key: "youtube", label: "YouTube", url: form.youtube, icon: YoutubeIcon, color: "text-rose-400 bg-slate-800" },
+                  { key: "instagram", label: "Instagram", url: form.instagram, icon: InstagramIcon, color: "text-pink-400 bg-slate-800" },
+                  { key: "twitter", label: "X / Twitter", url: form.twitter, icon: XTwitterIcon, color: "text-sky-400 bg-slate-800" },
+                  { key: "facebook", label: "Facebook", url: form.facebook, icon: FacebookIcon, color: "text-blue-400 bg-slate-800" },
+                ].filter((item) => item.url && item.url.trim() !== "");
+
+                if (previewSocials.length === 0) return null;
+
+                return (
+                  <div className="flex items-center justify-center gap-2 pt-3 border-t border-slate-800">
+                    {previewSocials.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <span
+                          key={item.key}
+                          className={`p-1.5 rounded-lg border border-slate-700 shadow-sm ${item.color}`}
+                          title={item.label}
+                        >
+                          <Icon className="size-3.5" />
+                        </span>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>

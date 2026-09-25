@@ -1611,3 +1611,96 @@ export async function recalculateLeaderboardApi(): Promise<{ success: boolean; c
   }
   return { success: true };
 }
+
+// ============================================================================
+// USER MANAGEMENT API METHODS
+// ============================================================================
+
+export async function fetchUserManagementListApi(filters?: {
+  search?: string;
+  accountStatus?: string;
+  courseAccess?: string;
+  proAccess?: string;
+  premiumAccess?: string;
+}) {
+  try {
+    const params = new URLSearchParams();
+    if (filters?.search) params.append("search", filters.search);
+    if (filters?.accountStatus) params.append("accountStatus", filters.accountStatus);
+    if (filters?.courseAccess) params.append("courseAccess", filters.courseAccess);
+    if (filters?.proAccess) params.append("proAccess", filters.proAccess);
+    if (filters?.premiumAccess) params.append("premiumAccess", filters.premiumAccess);
+
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const res = await fetch(`${API_BASE}/user-management/list${qs}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.users) return data.users;
+    }
+  } catch (err) {
+    console.warn("[fetchUserManagementListApi API_BASE error]:", err);
+  }
+  return [];
+}
+
+export async function fetchUserManagementDetailsApi(userId: number) {
+  try {
+    const res = await fetch(`${API_BASE}/user-management/details/${userId}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) return { user: data.user, auditLogs: data.auditLogs || [] };
+    }
+  } catch (err) {
+    console.warn("[fetchUserManagementDetailsApi error]:", err);
+  }
+  return null;
+}
+
+export async function updateUserManagementAccessApi(payload: {
+  userId: number;
+  accessType: "course" | "pro" | "premium";
+  status: "on" | "off";
+  startDate?: string | null;
+  expiryDate?: string | null;
+  isLifetime?: boolean;
+  isOverrideBlocked?: boolean;
+  notes?: string;
+}) {
+  const res = await fetch(`${API_BASE}/user-management/update-access`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || "Failed to update user access.");
+  }
+  return await res.json();
+}
+
+export async function clearUserManagementOverrideApi(userId: number, accessType: "course" | "pro" | "premium") {
+  const res = await fetch(`${API_BASE}/user-management/clear-override`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, accessType }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || "Failed to clear user access override.");
+  }
+  return await res.json();
+}
+
+export async function setUserManagementAccountStatusApi(userId: number, status: "active" | "suspended" | "banned") {
+  const res = await fetch(`${API_BASE}/user-management/account-status`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, status }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || "Failed to update account status.");
+  }
+  return await res.json();
+}
+

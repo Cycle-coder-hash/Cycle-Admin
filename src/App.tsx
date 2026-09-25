@@ -4,6 +4,7 @@ import { AdminSidebar } from "./components/AdminSidebar";
 import { DashboardOverview } from "./pages/DashboardOverview";
 import { PaymentApprovals } from "./pages/PaymentApprovals";
 import { StudentManagement } from "./pages/StudentManagement";
+import { UserManagement } from "./pages/UserManagement";
 import { SupportMessages } from "./pages/SupportMessages";
 import { PlatformSettings } from "./pages/PlatformSettings";
 import { AuditLogs } from "./pages/AuditLogs";
@@ -53,9 +54,11 @@ const initialOwnerProfile: OwnerProfileData = {
   signatureQuoteEn: "Before you trade, understand trading. Before you deposit, understand trading.",
   signatureQuoteBn: "ট্রেড করার আগে ট্রেডিং বুঝুন। ডিপোজিট করার আগে ট্রেডিং বুঝুন।",
   telegram: "https://t.me/cycleofchart",
+  tiktok: "https://tiktok.com/@cycleofchart",
   youtube: "https://youtube.com/@cycleofchart",
+  instagram: "https://instagram.com/cycleofchart",
+  twitter: "https://x.com/cycleofchart",
   facebook: "https://facebook.com/cycleofchart",
-  twitter: "",
   email: "contact@cycleofchart.com",
   showExperienceCard: false,
   experienceLabel: "Market Experience",
@@ -366,6 +369,7 @@ export const App: React.FC = () => {
   const tabTitles: Record<string, string> = {
     overview: "Executive Performance Overview",
     orders: "Payment Verification Queue",
+    users: "User Management & Access Control",
     students: "Student & Access Management",
     ebooks: "Free eBooks & PDF Library CMS",
     owner: "Owner & Founder Profile CMS",
@@ -429,6 +433,9 @@ export const App: React.FC = () => {
           )}
           {activeTab === "orders" && (
             <PaymentApprovals orders={orders} onApprove={handleApproveOrder} onReject={handleRejectOrder} onDelete={handleDeleteOrder} />
+          )}
+          {activeTab === "users" && (
+            <UserManagement />
           )}
           {activeTab === "students" && (
             <StudentManagement

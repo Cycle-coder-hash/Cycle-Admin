@@ -11,6 +11,7 @@ import {
   Trophy,
   LogOut,
   ExternalLink,
+  UserCog,
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -38,6 +39,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       icon: FileCheck2,
       badge: pendingOrdersCount > 0 ? `${pendingOrdersCount}` : undefined,
     },
+    { id: "users", label: "User Management", icon: UserCog },
     { id: "students", label: "Students & Access", icon: Users },
     { id: "ebooks", label: "Free eBooks & PDFs", icon: BookOpen },
     {
