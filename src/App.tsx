@@ -126,6 +126,30 @@ export const App: React.FC = () => {
   // Owner Profile Saving State
   const [isSavingOwner, setIsSavingOwner] = useState(false);
 
+  // Collapsible sidebar state with localStorage persistence
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("cycle_admin_sidebar_collapsed");
+      return saved === "true";
+    }
+    return false;
+  });
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  const toggleSidebar = useCallback(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setIsMobileSidebarOpen((prev) => !prev);
+    } else {
+      setIsSidebarCollapsed((prev) => {
+        const next = !prev;
+        try {
+          localStorage.setItem("cycle_admin_sidebar_collapsed", String(next));
+        } catch {}
+        return next;
+      });
+    }
+  }, []);
+
   const loadLiveData = useCallback(async () => {
     try {
       setLoading(true);
@@ -398,12 +422,22 @@ export const App: React.FC = () => {
         onTabChange={setActiveTab}
         pendingOrdersCount={pendingOrdersCount}
         unreadMessagesCount={unreadMessagesCount}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={toggleSidebar}
+        isMobileOpen={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
 
-      <div className="lg:pl-64 flex min-h-screen flex-col">
+      <div
+        className={`flex min-h-screen flex-col transition-[padding] duration-300 ease-in-out ${
+          isSidebarCollapsed ? "lg:pl-20" : "lg:pl-64"
+        }`}
+      >
         <AdminHeader
           currentTabTitle={tabTitles[activeTab] || "Operations Console"}
           pendingCount={pendingOrdersCount}
+          isSidebarCollapsed={isSidebarCollapsed}
+          onToggleSidebar={toggleSidebar}
         />
 
         {/* Global Live Status & Control Bar */}
