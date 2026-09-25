@@ -70,6 +70,18 @@ const initialOwnerProfile: OwnerProfileData = {
   methodologyLabel: "Core Methodology",
   methodologyIcon: "award",
   showDetailsParagraph: false,
+  profile2Name: "Cycle of Chart",
+  profile2Role: "Institutional Trading Mentor",
+  profile2RoleBn: "ইন্সটিটিউশনাল ট্রেডিং মেন্টর",
+  profile2PhotoUrl: "/logo.jpg",
+  profile2BioEn: "Cycle of Chart is an institutional trading education and market research initiative committed to mentoring traders in SMC, liquidity engineering, and rule-based execution.",
+  profile2BioBn: "সাইকেল অব চার্ট একটি প্রাতিষ্ঠানিক ট্রেডিং শিক্ষা ও মার্কেট রিসার্চ প্ল্যাটফর্ম যা এসএমসি, লিকুইডিটি ইঞ্জিনিয়ারিং এবং নিয়মতান্ত্রিক এক্সিকিউশনে ট্রেডারদের প্রশিক্ষণ দেয়।",
+  profile2TradingStyle: "SMC, Liquidity & Order Flow Delivery",
+  profile2Telegram: "https://t.me/cycleofchart",
+  profile2Youtube: "https://youtube.com/@cycleofchart",
+  profile2Facebook: "https://facebook.com/cycleofchart",
+  profile2Twitter: "",
+  profile2Email: "contact@cycleofchart.com",
 };
 
 const initialEbookForm: EbookFormData = {

@@ -1212,6 +1212,15 @@ export async function updateOwnerProfileApi(payload: any) {
     }
   }
 
+  if (payload.profile2PhotoUrl && payload.profile2PhotoUrl.startsWith("data:image/")) {
+    try {
+      const cdnUrl2 = await uploadImageToImgbb(payload.profile2PhotoUrl);
+      updatedProfile.profile2PhotoUrl = cdnUrl2;
+    } catch (uploadErr) {
+      console.warn("[ImgBB auto-upload for profile2PhotoUrl failed, keeping base64]:", uploadErr);
+    }
+  }
+
   let savedSuccessfully = false;
 
   try {
