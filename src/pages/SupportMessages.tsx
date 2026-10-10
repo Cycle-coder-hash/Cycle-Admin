@@ -27,227 +27,45 @@ import {
   SupportMessage,
   CustomerSupportContext,
 } from "../lib/types";
-import {
-  fetchSupportConversationsApi,
-  fetchConversationMessagesApi,
-  sendAdminReplyApi,
-  markConversationReadApi,
-  fetchCustomerContextApi,
-  deleteSupportMessageApi,
-  deleteSupportConversationApi,
-} from "../lib/api";
+import { useSupportDesk } from "../hooks";
 
 interface SupportMessagesProps {
   onReload?: () => void;
 }
 
 export const SupportMessages: React.FC<SupportMessagesProps> = ({ onReload }) => {
-  const [conversations, setConversations] = useState<SupportConversation[]>([]);
-  const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [unreadOnlyFilter, setUnreadOnlyFilter] = useState(false);
-  const [messages, setMessages] = useState<SupportMessage[]>([]);
-  const [customerContext, setCustomerContext] = useState<CustomerSupportContext | null>(null);
-  const [replyMessage, setReplyMessage] = useState("");
-  const [isLoadingConversations, setIsLoadingConversations] = useState(true);
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
-  const [isLoadingContext, setIsLoadingContext] = useState(false);
-  const [isSendingReply, setIsSendingReply] = useState(false);
+  const {
+    conversations,
+    filteredConversations,
+    selectedConversationId,
+    setSelectedConversationId,
+    activeConversation,
+    messages,
+    customerContext,
+    replyMessage,
+    setReplyMessage,
+    searchQuery,
+    setSearchQuery,
+    unreadOnlyFilter,
+    setUnreadOnlyFilter,
+    isLoadingConversations,
+    isLoadingMessages,
+    isLoadingContext,
+    isSendingReply,
+    isDeletingConversation,
+    totalUnreadAll,
+    messagesEndRef,
+    textareaRef,
+    loadConversations,
+    loadMessages,
+    loadCustomerContext,
+    handleSendReply,
+    handleDeleteConversation,
+    handleDeleteMessage,
+    handleKeyDown,
+  } = useSupportDesk(onReload);
+
   const [showMobileContext, setShowMobileContext] = useState(false);
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  // 1. Load Conversations
-  const loadConversations = useCallback(async (quiet = false) => {
-    if (!quiet) setIsLoadingConversations(true);
-    try {
-      const data = await fetchSupportConversationsApi();
-      setConversations(data);
-    } catch (err) {
-      console.warn("[SupportMessages] loadConversations error:", err);
-    } finally {
-      if (!quiet) setIsLoadingConversations(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadConversations();
-    const interval = setInterval(() => {
-      loadConversations(true);
-    }, 3500);
-    return () => clearInterval(interval);
-  }, [loadConversations]);
-
-  // Auto-select first conversation if none selected
-  useEffect(() => {
-    if (!selectedConversationId && conversations.length > 0) {
-      setSelectedConversationId(conversations[0].id);
-    }
-  }, [conversations, selectedConversationId]);
-
-  const activeConversation = useMemo(() => {
-    return conversations.find((c) => Number(c.id) === Number(selectedConversationId)) || null;
-  }, [conversations, selectedConversationId]);
-
-  // 2. Load Messages for Active Conversation
-  const loadMessages = useCallback(async (quiet = false) => {
-    if (!selectedConversationId) return;
-    if (!quiet) setIsLoadingMessages(true);
-    try {
-      const msgs = await fetchConversationMessagesApi(selectedConversationId);
-      setMessages(msgs);
-      if (!quiet) {
-        setTimeout(scrollToBottom, 50);
-      }
-    } catch (err) {
-      console.warn("[SupportMessages] loadMessages error:", err);
-    } finally {
-      if (!quiet) setIsLoadingMessages(false);
-    }
-  }, [selectedConversationId]);
-
-  useEffect(() => {
-    if (selectedConversationId) {
-      loadMessages();
-      const interval = setInterval(() => {
-        loadMessages(true);
-      }, 2500);
-      return () => clearInterval(interval);
-    } else {
-      setMessages([]);
-    }
-  }, [selectedConversationId, loadMessages]);
-
-  // 3. Load Customer Context (Profile, Entitlements, Orders)
-  const loadCustomerContext = useCallback(async () => {
-    if (!activeConversation?.customerId) {
-      setCustomerContext(null);
-      return;
-    }
-    setIsLoadingContext(true);
-    try {
-      const ctx = await fetchCustomerContextApi(activeConversation.customerId);
-      setCustomerContext(ctx);
-    } catch (err) {
-      console.warn("[SupportMessages] loadCustomerContext error:", err);
-      setCustomerContext(null);
-    } finally {
-      setIsLoadingContext(false);
-    }
-  }, [activeConversation?.customerId]);
-
-  useEffect(() => {
-    loadCustomerContext();
-  }, [loadCustomerContext]);
-
-  // 4. Auto Mark Read when viewing conversation with unread count
-  useEffect(() => {
-    if (selectedConversationId && activeConversation && activeConversation.unreadCount > 0) {
-      markConversationReadApi(selectedConversationId)
-        .then(() => {
-          setConversations((prev) =>
-            prev.map((c) => (Number(c.id) === Number(selectedConversationId) ? { ...c, unreadCount: 0 } : c))
-          );
-          if (onReload) onReload();
-        })
-        .catch(console.warn);
-    }
-  }, [selectedConversationId, activeConversation?.unreadCount, onReload]);
-
-  // 5. Send Admin Reply
-    const [isDeletingConversation, setIsDeletingConversation] = useState(false);
-
-  const handleDeleteConversation = async () => {
-    if (!selectedConversationId) return;
-    const confirmDelete = window.confirm(
-      "Are you sure you want to permanently delete this conversation and all its messages from the database? This action cannot be undone."
-    );
-    if (!confirmDelete) return;
-
-    setIsDeletingConversation(true);
-    try {
-      await deleteSupportConversationApi(selectedConversationId);
-      const deletedId = selectedConversationId;
-      setConversations((prev) => prev.filter((c) => Number(c.id) !== Number(deletedId)));
-      setSelectedConversationId(null);
-      setMessages([]);
-      setCustomerContext(null);
-      await loadConversations(true);
-      if (onReload) onReload();
-    } catch (err: any) {
-      alert("Failed to delete conversation: " + (err.message || "Unknown error"));
-    } finally {
-      setIsDeletingConversation(false);
-    }
-  };
-
-  const handleDeleteMessage = async (messageId: number) => {
-    if (!selectedConversationId) return;
-    const confirmDelete = window.confirm(
-      "Are you sure you want to permanently delete this message from the database?"
-    );
-    if (!confirmDelete) return;
-
-    try {
-      await deleteSupportMessageApi(selectedConversationId, messageId);
-      setMessages((prev) => prev.filter((m) => Number(m.id) !== Number(messageId)));
-      await loadConversations(true);
-    } catch (err: any) {
-      alert("Failed to delete message: " + (err.message || "Unknown error"));
-    }
-  };
-
-  const handleSendReply = async () => {
-    if (!selectedConversationId || !replyMessage.trim() || isSendingReply) return;
-    const text = replyMessage.trim();
-    setIsSendingReply(true);
-
-    try {
-      const res = await sendAdminReplyApi(selectedConversationId, text, activeConversation?.customerId);
-      setReplyMessage("");
-      if (res.success && res.message) {
-        setMessages((prev) => [...prev, res.message!]);
-      } else {
-        await loadMessages(true);
-      }
-      await loadConversations(true);
-      setTimeout(scrollToBottom, 50);
-      if (textareaRef.current) textareaRef.current.focus();
-    } catch (err: any) {
-      alert("Failed to send reply: " + (err.message || "Unknown error"));
-    } finally {
-      setIsSendingReply(false);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSendReply();
-    }
-  };
-
-  // Filtered Conversations List
-  const filteredConversations = useMemo(() => {
-    return conversations.filter((c) => {
-      if (unreadOnlyFilter && c.unreadCount === 0) return false;
-      if (!searchQuery.trim()) return true;
-      const q = searchQuery.toLowerCase();
-      const name = c.customer?.name?.toLowerCase() || "";
-      const email = c.customer?.email?.toLowerCase() || "";
-      const lastMsg = c.lastMessage?.message?.toLowerCase() || "";
-      return name.includes(q) || email.includes(q) || lastMsg.includes(q);
-    });
-  }, [conversations, searchQuery, unreadOnlyFilter]);
-
-  const totalUnreadAll = useMemo(() => {
-    return conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
-  }, [conversations]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-140px)] min-h-[640px] rounded-2xl border border-slate-800 bg-[#070e1b] overflow-hidden shadow-2xl">

@@ -19,7 +19,7 @@ import { PaymentSettingsConfig, defaultPaymentConfig } from "../lib/api";
 
 interface PlatformSettingsProps {
   config: PaymentSettingsConfig;
-  onSave: (config: PaymentSettingsConfig) => Promise<void>;
+  onSave: (config: PaymentSettingsConfig) => Promise<unknown> | void;
   onReload?: () => void;
   isSaving?: boolean;
 }
