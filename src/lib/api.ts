@@ -32,11 +32,17 @@ import {
   CustomerSupportContext,
   AuditEvent,
   CourseTelegramConfig,
+  CourseId,
+  CourseClass,
+  CourseAlbumMeta,
 } from "./types";
 
 // Re-export shared types & configs
 export type {
   CourseTelegramConfig,
+  CourseId,
+  CourseClass,
+  CourseAlbumMeta,
   SupportConversation,
   SupportMessage,
   CustomerSupportContext,
@@ -136,3 +142,33 @@ export const fetchLeaderboardWeightsApi = () => services.settings.fetchLeaderboa
 export const updateLeaderboardWeightsApi = (weights: LeaderboardWeightsConfig) =>
   services.settings.updateLeaderboardWeights(weights);
 export const recalculateLeaderboardApi = () => services.settings.recalculateLeaderboard();
+
+// ============================================================================
+// 7. LIBRARY & COURSE ALBUMS (Delegated to CourseService)
+// ============================================================================
+export const fetchCourseAlbumMetaApi = (courseId: CourseId) => services.courses.fetchCourseAlbumMeta(courseId);
+export const updateCourseAlbumMetaApi = (courseId: CourseId, payload: Partial<CourseAlbumMeta>) =>
+  services.courses.updateCourseAlbumMeta(courseId, payload);
+export const fetchCourseClassesApi = (courseId: CourseId) => services.courses.fetchCourseClasses(courseId);
+export const createCourseClassApi = (
+  courseId: CourseId,
+  payload: {
+    title: string;
+    description?: string;
+    videoUrl: string;
+    duration?: string;
+    order?: number;
+    isPublished?: boolean;
+    resourceLink?: string;
+  }
+) => services.courses.createCourseClass(courseId, payload);
+export const updateCourseClassApi = (
+  courseId: CourseId,
+  classId: string,
+  payload: Partial<CourseClass>
+) => services.courses.updateCourseClass(courseId, classId, payload);
+export const deleteCourseClassApi = (courseId: CourseId, classId: string) =>
+  services.courses.deleteCourseClass(courseId, classId);
+export const reorderCourseClassesApi = (courseId: CourseId, orderedClassIds: string[]) =>
+  services.courses.reorderCourseClasses(courseId, orderedClassIds);
+export const reorderEbooksApi = (orderedIds: number[]) => services.courses.reorderEbooks(orderedIds);

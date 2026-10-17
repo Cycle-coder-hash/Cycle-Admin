@@ -46,10 +46,15 @@ export interface SupportConversation {
   lastMessageAt: string | null;
   customer?: {
     id: number;
+    openId?: string | null;
+    displayId?: string;
     name: string;
     email: string | null;
     phone: string | null;
     avatar: string | null;
+    username?: string | null;
+    role?: string;
+    accountStatus?: string;
     createdAt: string | null;
   };
   lastMessage?: SupportMessage | null;
@@ -61,11 +66,14 @@ export interface CustomerSupportContext {
   customer: {
     id: number;
     openId?: string;
+    displayId?: string;
     name: string;
     email: string | null;
     phone: string | null;
     avatar: string | null;
+    username?: string | null;
     role: string;
+    accountStatus?: string;
     createdAt: string | null;
   };
   entitlements: Array<{
@@ -119,4 +127,38 @@ export interface CourseTelegramConfig {
   dismissButtonTextBn: string;
   displayMode: "once" | "until_joined";
   popupDelay?: number;
+}
+
+export type CourseId = "basic-to-advance" | "cycle-blueprint";
+
+export interface CourseClass {
+  id: string;
+  courseId: CourseId;
+  title: string;
+  description?: string;
+  videoUrl?: string;
+  embedUrl?: string;
+  duration?: string;
+  order: number;
+  isPublished?: boolean;
+  resourceLink?: string;
+  thumbnailUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CourseAlbumMeta {
+  id: CourseId;
+  title: string;
+  titleBn?: string;
+  subtitle: string;
+  subtitleBn?: string;
+  description: string;
+  bundleId: number;
+  priceBdt: string;
+  priceUsd: string;
+  badgeText?: string;
+  features?: string[];
+  thumbnailUrl?: string;
+  isPublished?: boolean;
 }

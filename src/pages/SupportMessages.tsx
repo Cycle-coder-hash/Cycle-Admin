@@ -531,47 +531,96 @@ export const SupportMessages: React.FC<SupportMessagesProps> = ({ onReload }) =>
                 <>
                   {/* Customer Profile Card */}
                   <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3.5 space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="flex size-11 items-center justify-center rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 font-black text-white text-sm shadow-md">
-                        {(customerContext?.customer.name || activeConversation.customer?.name || "C")
-                          .charAt(0)
-                          .toUpperCase()}
+                    <div className="flex items-start gap-3">
+                      <div className="relative shrink-0">
+                        {(customerContext?.customer?.avatar || activeConversation.customer?.avatar) ? (
+                          <img
+                            src={customerContext?.customer?.avatar || activeConversation.customer?.avatar || ""}
+                            alt={customerContext?.customer?.name || activeConversation.customer?.name || "Customer"}
+                            className="size-12 rounded-xl object-cover border border-slate-700 bg-slate-800 shadow-md"
+                          />
+                        ) : (
+                          <div className="flex size-12 items-center justify-center rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 font-black text-white text-base shadow-md">
+                            {((customerContext?.customer?.name || activeConversation.customer?.name || "C").charAt(0)).toUpperCase()}
+                          </div>
+                        )}
                       </div>
+
                       <div className="min-w-0 flex-1">
                         <div className="text-xs font-bold text-white truncate">
                           {customerContext?.customer.name ||
                             activeConversation.customer?.name ||
                             `Customer #${activeConversation.customerId}`}
                         </div>
-                        <div className="text-[10px] text-slate-400 truncate">
-                          ID: #{activeConversation.customerId}
+                        {(customerContext?.customer?.username || activeConversation.customer?.username) && (
+                          <div className="text-[11px] font-medium text-sky-400 truncate">
+                            @{customerContext?.customer?.username || activeConversation.customer?.username}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          <span className="rounded bg-slate-800/90 border border-slate-700/80 px-1.5 py-0.2 text-[9px] font-mono text-slate-300 font-bold">
+                            {customerContext?.customer.displayId || activeConversation.customer?.displayId || `USER-${String(activeConversation.customerId).padStart(4, "0")}`}
+                          </span>
+                          <span className="rounded-md bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.2 text-[9px] font-bold text-emerald-400 capitalize">
+                            {customerContext?.customer.accountStatus || activeConversation.customer?.accountStatus || "Active"}
+                          </span>
                         </div>
-                        <span className="inline-block rounded-md bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.2 text-[9px] font-bold text-emerald-400 mt-1">
-                          Active Customer
-                        </span>
                       </div>
                     </div>
 
-                    <div className="space-y-1.5 text-[11px] text-slate-300 pt-2 border-t border-slate-800/80">
+                    <div className="space-y-2 text-[11px] text-slate-300 pt-2.5 border-t border-slate-800/80">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Mail size={13} className="text-slate-500 shrink-0" />
+                          <span className="truncate select-all text-slate-200">
+                            {customerContext?.customer.email || activeConversation.customer?.email || "Unavailable"}
+                          </span>
+                        </div>
+                        {(customerContext?.customer.email || activeConversation.customer?.email) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(
+                                customerContext?.customer.email || activeConversation.customer?.email || ""
+                              );
+                            }}
+                            className="text-[10px] text-sky-400 hover:text-sky-300 shrink-0 font-medium"
+                          >
+                            Copy
+                          </button>
+                        )}
+                      </div>
+
                       <div className="flex items-center gap-2">
-                        <Mail size={12} className="text-slate-500 shrink-0" />
-                        <span className="truncate">
-                          {customerContext?.customer.email || activeConversation.customer?.email || "No email"}
+                        <Phone size={13} className="text-slate-500 shrink-0" />
+                        <span className="truncate text-slate-300">
+                          {customerContext?.customer.phone || activeConversation.customer?.phone || "Not provided"}
                         </span>
                       </div>
+
                       <div className="flex items-center gap-2">
-                        <Phone size={12} className="text-slate-500 shrink-0" />
-                        <span className="truncate">
-                          {customerContext?.customer.phone || activeConversation.customer?.phone || "No phone"}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Calendar size={12} className="text-slate-500 shrink-0" />
+                        <Calendar size={13} className="text-slate-500 shrink-0" />
                         <span className="text-slate-400">
                           Joined:{" "}
                           {customerContext?.customer.createdAt
                             ? formatDate(customerContext.customer.createdAt)
-                            : "N/A"}
+                            : "Not recorded"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck size={13} className="text-slate-500 shrink-0" />
+                        <span className="text-slate-400">
+                          Auth:{" "}
+                          <span className="text-slate-200 font-medium">
+                            {(customerContext?.customer.email || activeConversation.customer?.email)?.includes("@gmail.com")
+                              ? "Google OAuth"
+                              : customerContext?.customer.openId?.startsWith("user_")
+                              ? "Email / Password"
+                              : customerContext?.customer.openId
+                              ? "Google OAuth"
+                              : "Authenticated Account"}
+                          </span>
                         </span>
                       </div>
                     </div>

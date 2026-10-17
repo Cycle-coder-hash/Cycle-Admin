@@ -50,7 +50,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     },
     { id: "users", label: "User Management", icon: UserCog },
     { id: "students", label: "Students & Access", icon: Users },
-    { id: "ebooks", label: "Free eBooks & PDFs", icon: BookOpen },
+    { id: "library", label: "Library Management", icon: BookOpen },
     {
       id: "support",
       label: "Support Messages",
@@ -123,7 +123,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           <nav className="mt-8 space-y-1.5">
             {menuItems.map((item) => {
               const Icon = item.icon;
-              const isActive = activeTab === item.id;
+              const isActive = activeTab === item.id || (item.id === "library" && activeTab === "ebooks");
 
               if (isCollapsed) {
                 return (
@@ -247,7 +247,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               <nav className="mt-8 space-y-1.5">
                 {menuItems.map((item) => {
                   const Icon = item.icon;
-                  const isActive = activeTab === item.id;
+                  const isActive = activeTab === item.id || (item.id === "library" && activeTab === "ebooks");
                   return (
                     <button
                       key={item.id}

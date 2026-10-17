@@ -9,6 +9,7 @@ import { SupportMessages } from "./pages/SupportMessages";
 import { PlatformSettings } from "./pages/PlatformSettings";
 import { AuditLogs } from "./pages/AuditLogs";
 import { EbookManagement } from "./pages/EbookManagement";
+import { LibraryManagement } from "./pages/LibraryManagement";
 import { OwnerProfileCMS } from "./pages/OwnerProfileCMS";
 import { LeaderboardSettings } from "./pages/LeaderboardSettings";
 import { EbookModal } from "./modals/EbookModal";
@@ -28,6 +29,7 @@ const tabTitles: Record<string, string> = {
   orders: "Payment Verification Queue",
   users: "User Management & Access Control",
   students: "Student & Access Management",
+  library: "Library & Course Management CMS",
   ebooks: "Free eBooks & PDF Library CMS",
   owner: "Owner & Founder Profile CMS",
   support: "Customer Support Messages",
@@ -248,6 +250,7 @@ export const App: React.FC = () => {
               onUpdateRole={updateRole}
             />
           )}
+          {activeTab === "library" && <LibraryManagement />}
           {activeTab === "ebooks" && (
             <EbookManagement
               ebooks={ebooks}
