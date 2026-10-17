@@ -1,5 +1,6 @@
 import React from "react";
 import { ArrowUpRight, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { APP_CONFIG } from "../core/config/env";
 
 interface AdminHeaderProps {
   currentTabTitle: string;
@@ -43,7 +44,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
 
       <div className="flex items-center gap-3 sm:gap-4">
         <a
-          href="http://localhost:3000/dashboard"
+          href={`${APP_CONFIG.WEB_APP_URL}/dashboard`}
           target="_blank"
           rel="noreferrer"
           className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/80 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-slate-300 hover:text-white transition"

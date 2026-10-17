@@ -37,6 +37,7 @@ import {
   FacebookIcon,
 } from "../components/SocialIcons";
 import { OwnerProfilePreview } from "../components/OwnerProfilePreview";
+import { APP_CONFIG } from "../core/config/env";
 
 export interface OwnerProfileData {
   isVisible?: boolean;
@@ -274,7 +275,7 @@ export const OwnerProfileCMS: React.FC<OwnerProfileCMSProps> = ({
           </button>
 
           <a
-            href="http://localhost:3000/#owner-profile"
+            href={`${APP_CONFIG.WEB_APP_URL}/#owner-profile`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-bold text-sky-400 hover:bg-sky-500/20 transition"
