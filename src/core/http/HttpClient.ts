@@ -3,6 +3,8 @@
  * Provides base network access, standardized error handling, and method abstractions.
  */
 
+import { APP_CONFIG } from "../config/env";
+
 export class HttpError extends Error {
   constructor(
     public readonly status: number,
@@ -30,6 +32,7 @@ export class HttpClient {
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
+      "x-admin-key": APP_CONFIG.MASTER_KEY,
       ...(options.headers as Record<string, string> || {}),
     };
 

@@ -113,9 +113,14 @@ export class SettingsService extends HttpClient implements ISettingsService {
 
   public async fetchPaymentSettings(): Promise<PaymentSettingsConfig> {
     try {
-      const data = await this.get<{ success?: boolean; gateways?: any; announcement?: string; announcementActive?: boolean }>(
-        "/payment-settings"
-      );
+      const data = await this.get<{
+        success?: boolean;
+        gateways?: any;
+        announcement?: string;
+        announcementActive?: boolean;
+        studentTelegramUrl?: string;
+        studentTelegramDescription?: string;
+      }>("/payment-settings");
       if (data?.success && data.gateways) {
         return {
           bkash: { ...defaultPaymentConfig.bkash, ...data.gateways.bkash },
@@ -123,6 +128,9 @@ export class SettingsService extends HttpClient implements ISettingsService {
           rocket: { ...defaultPaymentConfig.rocket, ...data.gateways.rocket },
           announcement: data.announcement || defaultPaymentConfig.announcement,
           announcementActive: data.announcementActive !== false,
+          studentTelegramUrl: data.studentTelegramUrl || defaultPaymentConfig.studentTelegramUrl,
+          studentTelegramDescription:
+            data.studentTelegramDescription || defaultPaymentConfig.studentTelegramDescription,
         };
       }
     } catch (err) {
@@ -139,6 +147,9 @@ export class SettingsService extends HttpClient implements ISettingsService {
           rocket: { ...defaultPaymentConfig.rocket, ...parsed.rocket },
           announcement: parsed.announcement ?? defaultPaymentConfig.announcement,
           announcementActive: parsed.announcementActive !== false,
+          studentTelegramUrl: parsed.studentTelegramUrl ?? defaultPaymentConfig.studentTelegramUrl,
+          studentTelegramDescription:
+            parsed.studentTelegramDescription ?? defaultPaymentConfig.studentTelegramDescription,
         };
       }
     } catch (err) {

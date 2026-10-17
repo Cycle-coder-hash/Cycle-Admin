@@ -206,7 +206,7 @@ export class EbookService extends HttpClient implements IEbookService {
   }
 
   public async uploadImage(base64Data: string): Promise<string> {
-    const IMGBB_KEY = "83205d3de1723e4976090aad947fc26d";
+    const IMGBB_KEY = APP_CONFIG.IMGBB_KEY;
     const cleanBase64 = base64Data.replace(/^data:image\/[a-zA-Z0-9+.-]+;base64,/, "");
     const fd = new FormData();
     fd.append("key", IMGBB_KEY);
