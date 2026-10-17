@@ -250,7 +250,16 @@ export const App: React.FC = () => {
               onUpdateRole={updateRole}
             />
           )}
-          {activeTab === "library" && <LibraryManagement />}
+          {activeTab === "library" && (
+            <LibraryManagement
+              ebooks={ebooks}
+              onOpenAddEbookModal={handleOpenAddEbook}
+              onOpenEditEbookModal={handleOpenEditEbook}
+              onTogglePublishEbook={handleTogglePublishEbook}
+              onDeleteEbook={(id) => setDeleteConfirmEbookId(id)}
+              onReloadEbooks={reloadEbooks}
+            />
+          )}
           {activeTab === "ebooks" && (
             <EbookManagement
               ebooks={ebooks}

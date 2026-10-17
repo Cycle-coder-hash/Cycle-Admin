@@ -5,7 +5,7 @@
 
 const defaultApiUrl = import.meta.env.DEV
   ? "http://localhost:3000"
-  : "https://cycleofchart.vercel.app";
+  : "https://www.cycleofchart.com";
 
 function normalizeApiUrl(url: string): string {
   let clean = (url || "").trim().replace(/^["']|["']$/g, "").replace(/\/+$/, "");
@@ -15,6 +15,7 @@ function normalizeApiUrl(url: string): string {
       ? `http://${clean}`
       : `https://${clean}`;
   }
+  clean = clean.replace(/^https?:\/\/cycleofchart\.vercel\.app(?=\/|$)/i, "https://www.cycleofchart.com");
   return clean;
 }
 
