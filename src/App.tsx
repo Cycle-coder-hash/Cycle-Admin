@@ -12,6 +12,7 @@ import { EbookManagement } from "./pages/EbookManagement";
 import { LibraryManagement } from "./pages/LibraryManagement";
 import { OwnerProfileCMS } from "./pages/OwnerProfileCMS";
 import { LeaderboardSettings } from "./pages/LeaderboardSettings";
+import { CommunityModeration } from "./pages/CommunityModeration";
 import { EbookModal } from "./modals/EbookModal";
 import { DeleteEbookModal } from "./modals/DeleteEbookModal";
 import {
@@ -30,6 +31,7 @@ const tabTitles: Record<string, string> = {
   users: "User Management & Access Control",
   students: "Student & Access Management",
   library: "Library & Course Management CMS",
+  community: "Community Feed & Discourse Moderation",
   ebooks: "Free eBooks & PDF Library CMS",
   owner: "Owner & Founder Profile CMS",
   support: "Customer Support Messages",
@@ -250,6 +252,7 @@ export const App: React.FC = () => {
               onUpdateRole={updateRole}
             />
           )}
+          {activeTab === "community" && <CommunityModeration />}
           {activeTab === "library" && (
             <LibraryManagement
               ebooks={ebooks}

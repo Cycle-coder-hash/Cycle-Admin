@@ -10,6 +10,7 @@ import {
   UserCheck,
   Trophy,
   UserCog,
+  MessagesSquare,
   ChevronLeft,
   ChevronRight,
   X,
@@ -50,6 +51,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     },
     { id: "users", label: "User Management", icon: UserCog },
     { id: "students", label: "Students & Access", icon: Users },
+    { id: "community", label: "Community Feed", icon: MessagesSquare },
     { id: "library", label: "Library Management", icon: BookOpen },
     {
       id: "support",

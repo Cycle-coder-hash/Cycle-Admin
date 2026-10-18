@@ -143,7 +143,6 @@ export const updateLeaderboardWeightsApi = (weights: LeaderboardWeightsConfig) =
   services.settings.updateLeaderboardWeights(weights);
 export const recalculateLeaderboardApi = () => services.settings.recalculateLeaderboard();
 
-// ============================================================================
 // 7. LIBRARY & COURSE ALBUMS (Delegated to CourseService)
 // ============================================================================
 export const fetchCourseAlbumMetaApi = (courseId: CourseId) => services.courses.fetchCourseAlbumMeta(courseId);
@@ -172,3 +171,16 @@ export const deleteCourseClassApi = (courseId: CourseId, classId: string) =>
 export const reorderCourseClassesApi = (courseId: CourseId, orderedClassIds: string[]) =>
   services.courses.reorderCourseClasses(courseId, orderedClassIds);
 export const reorderEbooksApi = (orderedIds: number[]) => services.courses.reorderEbooks(orderedIds);
+
+// ============================================================================
+// 8. COMMUNITY MODERATION (Delegated to CommunityService)
+// ============================================================================
+export const fetchCommunityPostsApi = (limit?: number, cursor?: number) =>
+  services.community.fetchPosts(limit, cursor);
+export const deleteCommunityPostApi = (postId: number) =>
+  services.community.deletePost(postId);
+export const deleteCommunityCommentApi = (commentId: number) =>
+  services.community.deleteComment(commentId);
+export const togglePinCommunityPostApi = (postId: number, isPinned: boolean) =>
+  services.community.togglePin(postId, isPinned);
+

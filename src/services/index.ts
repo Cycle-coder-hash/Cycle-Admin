@@ -9,6 +9,7 @@ export * from "./EbookService";
 export * from "./OwnerProfileService";
 export * from "./SettingsService";
 export * from "./CourseService";
+export * from "./CommunityService";
 
 import { defaultOrderService } from "./OrderService";
 import { defaultUserService } from "./UserService";
@@ -17,6 +18,7 @@ import { defaultEbookService } from "./EbookService";
 import { defaultOwnerProfileService } from "./OwnerProfileService";
 import { defaultSettingsService } from "./SettingsService";
 import { CourseService } from "./CourseService";
+import { defaultCommunityService } from "./CommunityService";
 
 export const defaultCourseService = new CourseService();
 
@@ -28,4 +30,5 @@ export const services = {
   ownerProfile: defaultOwnerProfileService,
   settings: defaultSettingsService,
   courses: defaultCourseService,
+  community: defaultCommunityService,
 } as const;
