@@ -148,10 +148,43 @@ export class EbookService extends HttpClient implements IEbookService {
 
   public async uploadPdf(file: File): Promise<string> {
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const uniqueName = `${Date.now()}_${safeName}`;
 
-    // 1. Supabase Storage "ebooks" bucket
+    // 1. Primary: Backend Cloud endpoint (Cloudflare R2 storage)
     try {
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const apiRoot = APP_CONFIG.API_BASE.replace(/\/api\/admin\/?$/, "");
+      const res = await fetch(`${apiRoot}/api/upload/file`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": APP_CONFIG.MASTER_KEY,
+        },
+        body: JSON.stringify({
+          base64,
+          filename: safeName,
+          contentType: file.type || "application/pdf",
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.url && typeof data.url === "string" && data.url.startsWith("http")) {
+          return data.url;
+        }
+      }
+    } catch (apiErr) {
+      console.warn("[Backend upload proxy notice, trying Supabase fallback]:", apiErr);
+    }
+
+    // 2. Fallback: Supabase Storage "ebooks" bucket
+    try {
+      const uniqueName = `${Date.now()}_${safeName}`;
       const supaRes = await fetch(
         `${APP_CONFIG.SUPABASE_URL.replace(/\/rest\/v1\/?$/, "")}/storage/v1/object/ebooks/${uniqueName}`,
         {
@@ -169,45 +202,39 @@ export class EbookService extends HttpClient implements IEbookService {
         return `${APP_CONFIG.SUPABASE_URL.replace(/\/rest\/v1\/?$/, "")}/storage/v1/object/public/ebooks/${uniqueName}`;
       }
     } catch (supaErr) {
-      console.warn("[Direct Supabase Storage upload error, trying backend upload]:", supaErr);
-    }
-
-    // 2. Backend Cloud endpoint (/api/upload/file)
-    try {
-      const base64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-
-      const apiRoot = APP_CONFIG.API_BASE.replace(/\/api\/admin\/?$/, "");
-      const res = await fetch(`${apiRoot}/api/upload/file`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          base64,
-          filename: safeName,
-          contentType: file.type || "application/pdf",
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.url && typeof data.url === "string" && data.url.startsWith("http")) {
-          return data.url;
-        }
-      }
-    } catch (apiErr) {
-      console.warn("[Backend upload proxy notice]:", apiErr);
+      console.warn("[Direct Supabase Storage upload error]:", supaErr);
     }
 
     throw new Error("Unable to upload PDF to cloud storage. Please check your internet connection.");
   }
 
   public async uploadImage(base64Data: string): Promise<string> {
-    const IMGBB_KEY = APP_CONFIG.IMGBB_KEY;
     const cleanBase64 = base64Data.replace(/^data:image\/[a-zA-Z0-9+.-]+;base64,/, "");
+
+    // 1. Primary: Backend Cloud endpoint (Cloudflare R2 storage)
+    try {
+      const apiRoot = APP_CONFIG.API_BASE.replace(/\/api\/admin\/?$/, "");
+      const res = await fetch(`${apiRoot}/api/upload/image`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": APP_CONFIG.MASTER_KEY,
+        },
+        body: JSON.stringify({
+          base64: cleanBase64,
+          filename: `owner_profile_${Date.now()}.png`,
+        }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json?.url) return json.url;
+      }
+    } catch (e) {
+      console.warn("[Backend uploadImage notice, trying ImgBB fallback]:", e);
+    }
+
+    // 2. Fallback: ImgBB
+    const IMGBB_KEY = APP_CONFIG.IMGBB_KEY;
     const fd = new FormData();
     fd.append("key", IMGBB_KEY);
     fd.append("image", cleanBase64);
