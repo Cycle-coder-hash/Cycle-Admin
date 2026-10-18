@@ -8,11 +8,15 @@ export interface Order {
   productId?: number | null;
   amount: string;
   currency: string;
-  paymentMethod: "bkash" | "nagad" | "rocket";
+  baseUsdAmount?: string | null;
+  exchangeRate?: string | null;
+  rateTimestamp?: string | Date | null;
+  paymentMethod: "bkash" | "nagad" | "rocket" | "other" | string;
   transactionId: string;
   paymentStatus: "pending" | "approved" | "rejected";
   orderStatus: "pending" | "approved" | "rejected";
   rejectionReason?: string | null;
+  billingCycle?: string | null;
   createdAt: string | Date;
 }
 
@@ -95,6 +99,7 @@ export interface CustomerSupportContext {
     bundleId?: number | null;
     productId?: number | null;
     selectedPdfIds?: number[];
+    billingCycle?: string | null;
     createdAt: string;
   }>;
   stats: {

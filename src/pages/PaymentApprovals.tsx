@@ -126,8 +126,13 @@ export const PaymentApprovals: React.FC<PaymentApprovalsProps> = ({
                         {o.paymentMethod}
                       </span>
                       <span className="rounded-lg bg-sky-950/70 border border-sky-800/40 px-2 py-0.5 text-[11px] font-extrabold text-sky-300">
-                        {o.bundleId === 4 ? "Bundle 4 · Professional Blueprint" : o.bundleId === 2 ? "Bundle 2 · Course + eBook" : o.bundleId ? `Bundle #${o.bundleId}` : "Trading Package"}
+                        {o.bundleId === 101 ? "Pro Subscription" : o.bundleId === 102 ? "Premium Subscription" : o.bundleId === 4 ? "Bundle 4 · Professional Blueprint" : o.bundleId === 2 ? "Bundle 2 · Course + eBook" : o.bundleId ? `Bundle #${o.bundleId}` : "Trading Package"}
                       </span>
+                      {(o.billingCycle || o.bundleId === 101 || o.bundleId === 102) && (
+                        <span className="rounded-lg bg-indigo-950/80 border border-indigo-700/50 px-2 py-0.5 text-[11px] font-extrabold uppercase text-indigo-300">
+                          {(o.billingCycle === "annual" || o.billingCycle === "yearly") ? "Annual (365d)" : "Monthly (30d)"}
+                        </span>
+                      )}
                     </div>
 
                     <div className="mt-2.5 flex items-center gap-2">
@@ -167,8 +172,15 @@ export const PaymentApprovals: React.FC<PaymentApprovalsProps> = ({
 
                   <div className="flex items-center justify-between md:justify-end gap-4 border-t border-slate-800 pt-3 md:border-t-0 md:pt-0">
                     <div className="text-left md:text-right">
-                      <div className="text-2xl font-black text-white">৳{o.amount}</div>
-                      <div className="text-[10px] text-slate-500 uppercase font-bold">BDT Total</div>
+                      <div className="text-xl sm:text-2xl font-black text-white">
+                        {(o.currency === "USD" ? "$" : o.currency === "PKR" ? "Rs " : "৳") + o.amount} {o.currency || "BDT"}
+                      </div>
+                      {o.baseUsdAmount && o.currency !== "USD" && (
+                        <div className="text-[11px] font-semibold text-slate-400">
+                          ${o.baseUsdAmount} USD {o.exchangeRate ? `@ ${Number(o.exchangeRate).toFixed(2)}` : ""}
+                        </div>
+                      )}
+                      <div className="text-[10px] text-slate-500 uppercase font-bold">Total Charged</div>
                     </div>
 
                     {isPending && (
