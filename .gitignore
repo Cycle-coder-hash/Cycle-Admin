@@ -1,6 +1,6 @@
 node_modules
 dist
-.env
+# .env (tracked per user request)
 .env.local
 *.log
 *.code-workspace
