@@ -19,6 +19,7 @@ export function useUserManagement() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [courseFilter, setCourseFilter] = useState("all");
+  const [bullPrintFilter, setBullPrintFilter] = useState("all");
   const [proFilter, setProFilter] = useState("all");
   const [premiumFilter, setPremiumFilter] = useState("all");
 
@@ -32,6 +33,14 @@ export function useUserManagement() {
 
   // Modal Form States
   const [courseForm, setCourseForm] = useState<UserAccessFormState>({
+    status: "off",
+    startDate: new Date().toISOString().split("T")[0],
+    expiryDate: new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
+    isLifetime: false,
+    notes: "",
+  });
+
+  const [cycleBullPrintForm, setCycleBullPrintForm] = useState<UserAccessFormState>({
     status: "off",
     startDate: new Date().toISOString().split("T")[0],
     expiryDate: new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
@@ -64,6 +73,7 @@ export function useUserManagement() {
         search: search.trim() || undefined,
         accountStatus: statusFilter !== "all" ? statusFilter : undefined,
         courseAccess: courseFilter !== "all" ? courseFilter : undefined,
+        cycleBullPrintAccess: bullPrintFilter !== "all" ? bullPrintFilter : undefined,
         proAccess: proFilter !== "all" ? proFilter : undefined,
         premiumAccess: premiumFilter !== "all" ? premiumFilter : undefined,
       });
@@ -73,7 +83,7 @@ export function useUserManagement() {
     } finally {
       setLoading(false);
     }
-  }, [search, statusFilter, courseFilter, proFilter, premiumFilter]);
+  }, [search, statusFilter, courseFilter, bullPrintFilter, proFilter, premiumFilter]);
 
   useEffect(() => {
     loadUsers();
@@ -88,16 +98,31 @@ export function useUserManagement() {
         setSelectedUser(u);
         setAuditLogs(data.auditLogs || []);
 
+        const basicState = u.basicToAdvanceAccess || u.courseAccess;
         setCourseForm({
-          status: u.courseAccess.status,
-          startDate: u.courseAccess.startDate
-            ? u.courseAccess.startDate.split("T")[0]
+          status: basicState.status,
+          startDate: basicState.startDate
+            ? basicState.startDate.split("T")[0]
             : new Date().toISOString().split("T")[0],
           expiryDate:
-            u.courseAccess.expiryDate && u.courseAccess.expiryDate !== "LIFETIME"
-              ? u.courseAccess.expiryDate.split("T")[0]
+            basicState.expiryDate && basicState.expiryDate !== "LIFETIME"
+              ? basicState.expiryDate.split("T")[0]
               : new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
-          isLifetime: u.courseAccess.isLifetime,
+          isLifetime: basicState.isLifetime,
+          notes: "",
+        });
+
+        const bp = u.cycleBullPrintAccess;
+        setCycleBullPrintForm({
+          status: bp?.status ?? "off",
+          startDate: bp?.startDate
+            ? bp.startDate.split("T")[0]
+            : new Date().toISOString().split("T")[0],
+          expiryDate:
+            bp?.expiryDate && bp.expiryDate !== "LIFETIME"
+              ? bp.expiryDate.split("T")[0]
+              : new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
+          isLifetime: bp?.isLifetime ?? false,
           notes: "",
         });
 
@@ -147,13 +172,15 @@ export function useUserManagement() {
     let activeUsers = 0;
     let suspendedUsers = 0;
     let courseUsers = 0;
+    let bullPrintUsers = 0;
     let proUsers = 0;
     let premiumUsers = 0;
 
     for (const u of usersList) {
       if (u.accountStatus === "active") activeUsers++;
       if (u.accountStatus === "suspended" || u.accountStatus === "banned") suspendedUsers++;
-      if (u.isCourseOn) courseUsers++;
+      if (u.isBasicToAdvanceOn ?? u.isCourseOn) courseUsers++;
+      if (u.isCycleBullPrintOn) bullPrintUsers++;
       if (u.isProOn) proUsers++;
       if (u.isPremiumOn) premiumUsers++;
     }
@@ -163,14 +190,22 @@ export function useUserManagement() {
       activeUsers,
       suspendedUsers,
       courseUsers,
+      bullPrintUsers,
       proUsers,
       premiumUsers,
     };
   }, [usersList]);
 
-  const handleSaveAccess = async (accessType: "course" | "pro" | "premium") => {
+  const handleSaveAccess = async (accessType: "course" | "basic_to_advance" | "cycle_bull_print" | "pro" | "premium") => {
     if (!selectedUserId) return;
-    const form = accessType === "course" ? courseForm : accessType === "pro" ? proForm : premiumForm;
+    const form =
+      accessType === "cycle_bull_print"
+        ? cycleBullPrintForm
+        : accessType === "course" || accessType === "basic_to_advance"
+        ? courseForm
+        : accessType === "pro"
+        ? proForm
+        : premiumForm;
 
     try {
       setSavingAccessType(accessType);
@@ -184,11 +219,17 @@ export function useUserManagement() {
         startDate: form.startDate ? new Date(form.startDate).toISOString() : null,
         expiryDate: form.isLifetime ? null : form.expiryDate ? new Date(form.expiryDate).toISOString() : null,
         isLifetime: form.isLifetime,
-        isOverrideBlocked: form.status === "off",
+        isOverrideBlocked: false,
         notes: form.notes || undefined,
       });
 
-      setActionSuccess(`${accessType.toUpperCase()} Access updated successfully!`);
+      const label =
+        accessType === "cycle_bull_print"
+          ? "CYCLE BULL PRINT"
+          : accessType === "course" || accessType === "basic_to_advance"
+          ? "BASIC TO ADVANCE"
+          : accessType.toUpperCase();
+      setActionSuccess(`${label} Access updated successfully!`);
       await loadUserDetails(selectedUserId);
       await loadUsers();
       setTimeout(() => setActionSuccess(null), 4000);
@@ -200,7 +241,7 @@ export function useUserManagement() {
     }
   };
 
-  const handleClearOverride = async (accessType: "course" | "pro" | "premium") => {
+  const handleClearOverride = async (accessType: "course" | "basic_to_advance" | "cycle_bull_print" | "pro" | "premium") => {
     if (!selectedUserId) return;
     try {
       setSavingAccessType(`clear_${accessType}`);
@@ -208,7 +249,13 @@ export function useUserManagement() {
       setActionError(null);
 
       await services.users.clearUserManagementOverride(selectedUserId, accessType);
-      setActionSuccess(`Admin override cleared for ${accessType.toUpperCase()}. Automatic entitlement restored!`);
+      const label =
+        accessType === "cycle_bull_print"
+          ? "CYCLE BULL PRINT"
+          : accessType === "course" || accessType === "basic_to_advance"
+          ? "BASIC TO ADVANCE"
+          : accessType.toUpperCase();
+      setActionSuccess(`Admin override cleared for ${label}. Automatic entitlement restored!`);
       await loadUserDetails(selectedUserId);
       await loadUsers();
       setTimeout(() => setActionSuccess(null), 4000);
@@ -245,6 +292,8 @@ export function useUserManagement() {
     setStatusFilter,
     courseFilter,
     setCourseFilter,
+    bullPrintFilter,
+    setBullPrintFilter,
     proFilter,
     setProFilter,
     premiumFilter,
@@ -260,6 +309,8 @@ export function useUserManagement() {
     setActionError,
     courseForm,
     setCourseForm,
+    cycleBullPrintForm,
+    setCycleBullPrintForm,
     proForm,
     setProForm,
     premiumForm,

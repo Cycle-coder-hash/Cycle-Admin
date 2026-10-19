@@ -3,17 +3,27 @@ import { defaultSupabaseAdapter, SupabaseAdapter } from "../core/http/SupabaseAd
 import { Student } from "../lib/types";
 import { APP_CONFIG } from "../core/config/env";
 
+export type AccessType =
+  | "course"
+  | "basic_to_advance"
+  | "cycle_bull_print"
+  | "cycle-blueprint"
+  | "pro"
+  | "premium";
+
 export interface UserManagementFilters {
   search?: string;
   accountStatus?: string;
   courseAccess?: string;
+  basicToAdvanceAccess?: string;
+  cycleBullPrintAccess?: string;
   proAccess?: string;
   premiumAccess?: string;
 }
 
 export interface UpdateUserAccessPayload {
   userId: number;
-  accessType: "course" | "pro" | "premium";
+  accessType: AccessType;
   status: "on" | "off";
   startDate?: string | null;
   expiryDate?: string | null;
@@ -29,7 +39,7 @@ export interface IUserService {
   fetchUserManagementList(filters?: UserManagementFilters): Promise<any[]>;
   fetchUserManagementDetails(userId: number): Promise<{ user: any; auditLogs: any[] } | null>;
   updateUserManagementAccess(payload: UpdateUserAccessPayload): Promise<any>;
-  clearUserManagementOverride(userId: number, accessType: "course" | "pro" | "premium"): Promise<any>;
+  clearUserManagementOverride(userId: number, accessType: AccessType): Promise<any>;
   setUserManagementAccountStatus(userId: number, status: "active" | "suspended" | "banned"): Promise<any>;
 }
 
@@ -231,20 +241,29 @@ export class UserService extends HttpClient implements IUserService {
         accountStatusRaw === "suspended" || accountStatusRaw === "banned" ? accountStatusRaw : "active";
 
       const manualCourse = settingsMap.get(`manual_access_${numericId}:course`);
+      const manualBullPrint = settingsMap.get(`manual_access_${numericId}:cycle_bull_print`);
       const manualPro = settingsMap.get(`manual_access_${numericId}:pro`);
       const manualPremium = settingsMap.get(`manual_access_${numericId}:premium`);
       const sub = settingsMap.get(`user_subscription_${numericId}`);
 
       const userEnts = entitlementsList.filter((e: any) => Number(e.userId) === numericId);
-      const autoCourseActive = userEnts.some(
+
+      // Automatic Basic to Advance
+      const autoBasicActive = userEnts.some(
         (e: any) =>
           e.scope === "course" ||
           e.scope === "bundle:2" ||
-          e.scope === "bundle:3" ||
+          e.bundleId === 2
+      );
+
+      // Automatic Cycle Bull Print
+      const autoBullPrintActive = userEnts.some(
+        (e: any) =>
           e.scope === "bundle:4" ||
-          e.bundleId === 2 ||
-          e.bundleId === 3 ||
-          e.bundleId === 4
+          e.scope === "bundle:3" ||
+          e.scope === "all_courses" ||
+          e.bundleId === 4 ||
+          e.bundleId === 3
       );
 
       const subEndsAt = sub?.subscriptionEndsAt ? new Date(sub.subscriptionEndsAt) : null;
@@ -264,8 +283,10 @@ export class UserService extends HttpClient implements IUserService {
             ? "LIFETIME"
             : manualRec?.expiryDate
             ? new Date(manualRec.expiryDate).toISOString()
+            : autoActive
+            ? "LIFETIME"
             : null,
-          isLifetime: !!manualRec?.isLifetime,
+          isLifetime: !!manualRec?.isLifetime || autoActive,
           isOverrideBlocked,
           automaticActive: autoActive,
           automaticExpiry: autoExp,
@@ -274,7 +295,9 @@ export class UserService extends HttpClient implements IUserService {
         };
       };
 
-      const courseAccess = buildState(manualCourse, autoCourseActive, null);
+      const basicToAdvanceAccess = buildState(manualCourse, autoBasicActive, null);
+      const courseAccess = basicToAdvanceAccess; // 100% backward compatible
+      const cycleBullPrintAccess = buildState(manualBullPrint, autoBullPrintActive, null);
       const proAccess = buildState(
         manualPro,
         autoProActive,
@@ -311,9 +334,13 @@ export class UserService extends HttpClient implements IUserService {
         createdAt: u.createdAt,
         lastSignedIn: u.lastSignedIn,
         courseAccess,
+        basicToAdvanceAccess,
+        cycleBullPrintAccess,
         proAccess,
         premiumAccess,
         isCourseOn: courseAccess.effectiveActive,
+        isBasicToAdvanceOn: basicToAdvanceAccess.effectiveActive,
+        isCycleBullPrintOn: cycleBullPrintAccess.effectiveActive,
         isProOn: proAccess.effectiveActive,
         isPremiumOn: premiumAccess.effectiveActive,
         effectivePlan,
@@ -336,9 +363,16 @@ export class UserService extends HttpClient implements IUserService {
     if (filters?.accountStatus && filters.accountStatus !== "all") {
       results = results.filter((u) => u.accountStatus === filters.accountStatus);
     }
-    if (filters?.courseAccess && filters.courseAccess !== "all") {
+    if (filters?.basicToAdvanceAccess && filters.basicToAdvanceAccess !== "all") {
+      const wantOn = filters.basicToAdvanceAccess === "on";
+      results = results.filter((u) => u.isBasicToAdvanceOn === wantOn);
+    } else if (filters?.courseAccess && filters.courseAccess !== "all") {
       const wantOn = filters.courseAccess === "on";
       results = results.filter((u) => u.isCourseOn === wantOn);
+    }
+    if (filters?.cycleBullPrintAccess && filters.cycleBullPrintAccess !== "all") {
+      const wantOn = filters.cycleBullPrintAccess === "on";
+      results = results.filter((u) => u.isCycleBullPrintOn === wantOn);
     }
     if (filters?.proAccess && filters.proAccess !== "all") {
       const wantOn = filters.proAccess === "on";
@@ -357,7 +391,9 @@ export class UserService extends HttpClient implements IUserService {
       const params = new URLSearchParams();
       if (filters?.search) params.append("search", filters.search);
       if (filters?.accountStatus) params.append("accountStatus", filters.accountStatus);
+      if (filters?.basicToAdvanceAccess) params.append("basicToAdvanceAccess", filters.basicToAdvanceAccess);
       if (filters?.courseAccess) params.append("courseAccess", filters.courseAccess);
+      if (filters?.cycleBullPrintAccess) params.append("cycleBullPrintAccess", filters.cycleBullPrintAccess);
       if (filters?.proAccess) params.append("proAccess", filters.proAccess);
       if (filters?.premiumAccess) params.append("premiumAccess", filters.premiumAccess);
 
@@ -416,14 +452,15 @@ export class UserService extends HttpClient implements IUserService {
     }
 
     const { userId, accessType, status, startDate, expiryDate, isLifetime, isOverrideBlocked, notes } = payload;
+    const normAccessType = accessType === "basic_to_advance" ? "course" : accessType === "cycle-blueprint" ? "cycle_bull_print" : accessType;
     const now = new Date().toISOString();
-    const key = `manual_access_${userId}:${accessType}`;
+    const key = `manual_access_${userId}:${normAccessType}`;
     const record = {
       id: Date.now(),
       userId: Number(userId),
-      accessType,
+      accessType: normAccessType,
       status,
-      isOverrideBlocked: isOverrideBlocked !== undefined ? isOverrideBlocked : status === "off",
+      isOverrideBlocked: isOverrideBlocked === true,
       startDate: startDate || now,
       expiryDate: isLifetime ? null : expiryDate || null,
       isLifetime: !!isLifetime,
@@ -447,7 +484,7 @@ export class UserService extends HttpClient implements IUserService {
       logs.unshift({
         id: Date.now(),
         userId: Number(userId),
-        accessType,
+        accessType: normAccessType,
         previousState: status === "on" ? "OFF" : "ON",
         newState: status === "on" ? (isLifetime ? "ON (Lifetime)" : "ON") : "BLOCKED (Admin Override)",
         startDate: record.startDate,
@@ -470,7 +507,7 @@ export class UserService extends HttpClient implements IUserService {
 
   public async clearUserManagementOverride(
     userId: number,
-    accessType: "course" | "pro" | "premium"
+    accessType: AccessType
   ): Promise<any> {
     try {
       return await this.post("/user-management/clear-override", { userId, accessType });
@@ -478,12 +515,13 @@ export class UserService extends HttpClient implements IUserService {
       console.warn("[clearUserManagementOverride API_BASE error, updating Supabase directly]:", err);
     }
 
+    const normAccessType = accessType === "basic_to_advance" ? "course" : accessType === "cycle-blueprint" ? "cycle_bull_print" : accessType;
     const now = new Date().toISOString();
-    const key = `manual_access_${userId}:${accessType}`;
+    const key = `manual_access_${userId}:${normAccessType}`;
     const record = {
       id: Date.now(),
       userId: Number(userId),
-      accessType,
+      accessType: normAccessType,
       status: "off",
       isOverrideBlocked: false,
       startDate: null,

@@ -48,9 +48,13 @@ export interface UserManagementSummary {
   createdAt: string;
   lastSignedIn: string;
   courseAccess: UserAccessState;
+  basicToAdvanceAccess?: UserAccessState;
+  cycleBullPrintAccess?: UserAccessState;
   proAccess: UserAccessState;
   premiumAccess: UserAccessState;
   isCourseOn: boolean;
+  isBasicToAdvanceOn?: boolean;
+  isCycleBullPrintOn?: boolean;
   isProOn: boolean;
   isPremiumOn: boolean;
   effectivePlan: string;
@@ -59,7 +63,7 @@ export interface UserManagementSummary {
 export interface UserAccessAuditLog {
   id: number;
   userId: number;
-  accessType: "course" | "pro" | "premium";
+  accessType: "course" | "basic_to_advance" | "cycle_bull_print" | "cycle-blueprint" | "pro" | "premium" | string;
   previousState: string;
   newState: string;
   startDate: string | null;
@@ -81,6 +85,8 @@ export const UserManagement: React.FC = () => {
     setStatusFilter,
     courseFilter,
     setCourseFilter,
+    bullPrintFilter,
+    setBullPrintFilter,
     proFilter,
     setProFilter,
     premiumFilter,
@@ -96,6 +102,8 @@ export const UserManagement: React.FC = () => {
     setActionError,
     courseForm,
     setCourseForm,
+    cycleBullPrintForm,
+    setCycleBullPrintForm,
     proForm,
     setProForm,
     premiumForm,
@@ -154,7 +162,7 @@ export const UserManagement: React.FC = () => {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
         <div className="rounded-2xl border border-slate-800 bg-[#070e1b] p-4">
           <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Users</div>
           <div className="mt-1 text-2xl font-black text-white">{stats.total}</div>
@@ -166,8 +174,13 @@ export const UserManagement: React.FC = () => {
         </div>
 
         <div className="rounded-2xl border border-slate-800 bg-[#070e1b] p-4">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Course Access</div>
+          <div className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Basic to Advance</div>
           <div className="mt-1 text-2xl font-black text-amber-400">{stats.courseUsers}</div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-800 bg-[#070e1b] p-4">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-teal-400">Cycle Bull Print</div>
+          <div className="mt-1 text-2xl font-black text-teal-400">{stats.bullPrintUsers}</div>
         </div>
 
         <div className="rounded-2xl border border-slate-800 bg-[#070e1b] p-4">
@@ -212,15 +225,26 @@ export const UserManagement: React.FC = () => {
             <option value="banned">Status: Banned</option>
           </select>
 
-          {/* Course Access Filter */}
+          {/* Basic to Advance Access Filter */}
           <select
             value={courseFilter}
             onChange={(e) => setCourseFilter(e.target.value)}
             className="rounded-xl border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs font-bold text-slate-300 outline-none focus:border-sky-500"
           >
-            <option value="all">Course: All</option>
-            <option value="on">Course: ON</option>
-            <option value="off">Course: OFF</option>
+            <option value="all">Basic to Adv: All</option>
+            <option value="on">Basic to Adv: ON</option>
+            <option value="off">Basic to Adv: OFF</option>
+          </select>
+
+          {/* Cycle Bull Print Access Filter */}
+          <select
+            value={bullPrintFilter}
+            onChange={(e) => setBullPrintFilter(e.target.value)}
+            className="rounded-xl border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs font-bold text-slate-300 outline-none focus:border-sky-500"
+          >
+            <option value="all">Bull Print: All</option>
+            <option value="on">Bull Print: ON</option>
+            <option value="off">Bull Print: OFF</option>
           </select>
 
           {/* Pro Access Filter */}
@@ -245,13 +269,14 @@ export const UserManagement: React.FC = () => {
             <option value="off">Premium: OFF</option>
           </select>
 
-          {(search || statusFilter !== "all" || courseFilter !== "all" || proFilter !== "all" || premiumFilter !== "all") && (
+          {(search || statusFilter !== "all" || courseFilter !== "all" || bullPrintFilter !== "all" || proFilter !== "all" || premiumFilter !== "all") && (
             <button
               type="button"
               onClick={() => {
                 setSearch("");
                 setStatusFilter("all");
                 setCourseFilter("all");
+                setBullPrintFilter("all");
                 setProFilter("all");
                 setPremiumFilter("all");
               }}
@@ -274,7 +299,8 @@ export const UserManagement: React.FC = () => {
                 <th className="px-4 py-3.5">Gmail / Email</th>
                 <th className="px-4 py-3.5">Username</th>
                 <th className="px-4 py-3.5 text-center">Status</th>
-                <th className="px-4 py-3.5 text-center">Course</th>
+                <th className="px-4 py-3.5 text-center">Basic to Adv</th>
+                <th className="px-4 py-3.5 text-center">Bull Print</th>
                 <th className="px-4 py-3.5 text-center">Pro</th>
                 <th className="px-4 py-3.5 text-center">Premium</th>
                 <th className="px-4 py-3.5 text-right">Actions</th>
@@ -283,14 +309,14 @@ export const UserManagement: React.FC = () => {
             <tbody className="divide-y divide-slate-800/60 font-medium">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="py-16 text-center text-slate-400">
+                  <td colSpan={10} className="py-16 text-center text-slate-400">
                     <Loader2 className="mx-auto mb-2 animate-spin text-sky-400" size={24} />
                     Loading registered users from database...
                   </td>
                 </tr>
               ) : usersList.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-16 text-center text-slate-400">
+                  <td colSpan={10} className="py-16 text-center text-slate-400">
                     No users matching criteria found.
                   </td>
                 </tr>
@@ -372,10 +398,23 @@ export const UserManagement: React.FC = () => {
                       )}
                     </td>
 
-                    {/* Course Access */}
+                    {/* Basic to Advance Access */}
                     <td className="px-4 py-3.5 text-center">
-                      {u.isCourseOn ? (
+                      {(u.isBasicToAdvanceOn ?? u.isCourseOn) ? (
                         <span className="inline-flex items-center rounded-full bg-emerald-950 px-2.5 py-0.5 text-[11px] font-black text-emerald-300 border border-emerald-800">
+                          ON
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-bold text-slate-500">
+                          OFF
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Cycle Bull Print Access */}
+                    <td className="px-4 py-3.5 text-center">
+                      {u.isCycleBullPrintOn ? (
+                        <span className="inline-flex items-center rounded-full bg-teal-950 px-2.5 py-0.5 text-[11px] font-black text-teal-300 border border-teal-800">
                           ON
                         </span>
                       ) : (
@@ -433,7 +472,7 @@ export const UserManagement: React.FC = () => {
       {/* USER DETAILS & ACCESS CONTROL MODAL */}
       {selectedUserId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-in fade-in">
-          <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col rounded-3xl border border-slate-800 bg-[#070e1b] shadow-2xl overflow-hidden">
+          <div className="relative flex max-h-[90vh] w-full max-w-6xl flex-col rounded-3xl border border-slate-800 bg-[#070e1b] shadow-2xl overflow-hidden">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
               <div className="flex items-center gap-3">
@@ -561,29 +600,29 @@ export const UserManagement: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* 3 INDEPENDENT ACCESS CONTROLS */}
+                  {/* 4 INDEPENDENT ACCESS CONTROLS */}
                   <div>
                     <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
                       <Shield size={14} className="text-sky-400" />
                       Access Management (Independent Controls)
                     </h4>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {/* 1. COURSE ACCESS CARD */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {/* 1. COURSE A — BASIC TO ADVANCE CARD */}
                       <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 flex flex-col justify-between space-y-4">
                         <div>
                           <div className="flex items-center justify-between">
                             <span className="font-black text-xs uppercase tracking-wider text-amber-400 flex items-center gap-1">
-                              <BookOpen size={14} /> Course Access
+                              <BookOpen size={14} /> Basic to Advance
                             </span>
                             <span
                               className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
-                                selectedUser.courseAccess.effectiveActive
+                                (selectedUser.basicToAdvanceAccess?.effectiveActive ?? selectedUser.courseAccess.effectiveActive)
                                   ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
                                   : "bg-slate-800 text-slate-400"
                               }`}
                             >
-                              Effective: {selectedUser.courseAccess.effectiveActive ? "ON" : "OFF"}
+                              Effective: {(selectedUser.basicToAdvanceAccess?.effectiveActive ?? selectedUser.courseAccess.effectiveActive) ? "ON" : "OFF"}
                             </span>
                           </div>
 
@@ -592,16 +631,16 @@ export const UserManagement: React.FC = () => {
                             <div className="flex justify-between">
                               <span className="text-slate-400">Automatic:</span>
                               <span className="font-semibold text-slate-200">
-                                {selectedUser.courseAccess.automaticActive ? "Active" : "None"}
+                                {(selectedUser.basicToAdvanceAccess?.automaticActive ?? selectedUser.courseAccess.automaticActive) ? "Active (Lifetime)" : "None"}
                               </span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-slate-400">Manual Grant:</span>
                               <span className="font-semibold text-slate-200">
-                                {selectedUser.courseAccess.manualActive
-                                  ? selectedUser.courseAccess.isLifetime
+                                {(selectedUser.basicToAdvanceAccess?.manualActive ?? selectedUser.courseAccess.manualActive)
+                                  ? (selectedUser.basicToAdvanceAccess?.isLifetime ?? selectedUser.courseAccess.isLifetime)
                                     ? "Active (Lifetime)"
-                                    : `Active (until ${formatDate(selectedUser.courseAccess.expiryDate)})`
+                                    : `Active (until ${formatDate(selectedUser.basicToAdvanceAccess?.expiryDate ?? selectedUser.courseAccess.expiryDate)})`
                                   : "None / OFF"}
                               </span>
                             </div>
@@ -609,12 +648,12 @@ export const UserManagement: React.FC = () => {
                               <span className="text-slate-400">Admin Override:</span>
                               <span
                                 className={`font-black ${
-                                  selectedUser.courseAccess.isOverrideBlocked
+                                  (selectedUser.basicToAdvanceAccess?.isOverrideBlocked ?? selectedUser.courseAccess.isOverrideBlocked)
                                     ? "text-rose-400"
                                     : "text-slate-500"
                                 }`}
                               >
-                                {selectedUser.courseAccess.isOverrideBlocked ? "BLOCKED" : "None"}
+                                {(selectedUser.basicToAdvanceAccess?.isOverrideBlocked ?? selectedUser.courseAccess.isOverrideBlocked) ? "BLOCKED" : "None"}
                               </span>
                             </div>
                           </div>
@@ -692,7 +731,7 @@ export const UserManagement: React.FC = () => {
                           )}
 
                           {/* Clear override action if blocked */}
-                          {selectedUser.courseAccess.isOverrideBlocked && (
+                          {(selectedUser.basicToAdvanceAccess?.isOverrideBlocked ?? selectedUser.courseAccess.isOverrideBlocked) && (
                             <div className="mt-3">
                               <button
                                 type="button"
@@ -713,7 +752,155 @@ export const UserManagement: React.FC = () => {
                           className="w-full rounded-xl bg-amber-600 hover:bg-amber-500 py-2 text-xs font-bold text-white transition flex items-center justify-center gap-1.5"
                         >
                           {savingAccessType === "course" && <Loader2 size={13} className="animate-spin" />}
-                          <span>Save Course Access</span>
+                          <span>Save Basic to Advance</span>
+                        </button>
+                      </div>
+
+                      {/* 2. COURSE B — CYCLE BULL PRINT CARD */}
+                      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 flex flex-col justify-between space-y-4">
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <span className="font-black text-xs uppercase tracking-wider text-teal-400 flex items-center gap-1">
+                              <BookOpen size={14} /> Cycle Bull Print
+                            </span>
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                                selectedUser.cycleBullPrintAccess?.effectiveActive
+                                  ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                                  : "bg-slate-800 text-slate-400"
+                              }`}
+                            >
+                              Effective: {selectedUser.cycleBullPrintAccess?.effectiveActive ? "ON" : "OFF"}
+                            </span>
+                          </div>
+
+                          {/* Overview Badges */}
+                          <div className="mt-3 space-y-1.5 text-[11px] bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                            <div className="flex justify-between">
+                              <span className="text-slate-400">Automatic:</span>
+                              <span className="font-semibold text-slate-200">
+                                {selectedUser.cycleBullPrintAccess?.automaticActive ? "Active (Lifetime)" : "None"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-400">Manual Grant:</span>
+                              <span className="font-semibold text-slate-200">
+                                {selectedUser.cycleBullPrintAccess?.manualActive
+                                  ? selectedUser.cycleBullPrintAccess.isLifetime
+                                    ? "Active (Lifetime)"
+                                    : `Active (until ${formatDate(selectedUser.cycleBullPrintAccess.expiryDate)})`
+                                  : "None / OFF"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-400">Admin Override:</span>
+                              <span
+                                className={`font-black ${
+                                  selectedUser.cycleBullPrintAccess?.isOverrideBlocked
+                                    ? "text-rose-400"
+                                    : "text-slate-500"
+                                }`}
+                              >
+                                {selectedUser.cycleBullPrintAccess?.isOverrideBlocked ? "BLOCKED" : "None"}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Toggle Switch */}
+                          <div className="mt-4 flex items-center justify-between border-t border-slate-800 pt-3">
+                            <span className="text-xs font-bold text-slate-200">Access Switch:</span>
+                            <div className="flex rounded-lg border border-slate-700 p-0.5 bg-slate-950">
+                              <button
+                                type="button"
+                                onClick={() => setCycleBullPrintForm((prev) => ({ ...prev, status: "on" }))}
+                                className={`px-2.5 py-1 text-xs font-black rounded-md transition ${
+                                  cycleBullPrintForm.status === "on" ? "bg-emerald-600 text-white shadow" : "text-slate-400"
+                                }`}
+                              >
+                                ON
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setCycleBullPrintForm((prev) => ({ ...prev, status: "off" }))}
+                                className={`px-2.5 py-1 text-xs font-black rounded-md transition ${
+                                  cycleBullPrintForm.status === "off" ? "bg-rose-600 text-white shadow" : "text-slate-400"
+                                }`}
+                              >
+                                OFF
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Dates */}
+                          {cycleBullPrintForm.status === "on" && (
+                            <div className="mt-3 space-y-2.5 text-xs">
+                              <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-300">
+                                <input
+                                  type="checkbox"
+                                  checked={cycleBullPrintForm.isLifetime}
+                                  onChange={(e) =>
+                                    setCycleBullPrintForm((prev) => ({ ...prev, isLifetime: e.target.checked }))
+                                  }
+                                  className="rounded border-slate-700 text-sky-500"
+                                />
+                                <span>Lifetime Access</span>
+                              </label>
+
+                              <div>
+                                <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+                                  Start Date
+                                </label>
+                                <input
+                                  type="date"
+                                  value={cycleBullPrintForm.startDate}
+                                  onChange={(e) =>
+                                    setCycleBullPrintForm((prev) => ({ ...prev, startDate: e.target.value }))
+                                  }
+                                  className="w-full rounded-lg border border-slate-800 bg-slate-950 p-1.5 text-xs text-white"
+                                />
+                              </div>
+
+                              {!cycleBullPrintForm.isLifetime && (
+                                <div>
+                                  <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+                                    Expiry Date
+                                  </label>
+                                  <input
+                                    type="date"
+                                    value={cycleBullPrintForm.expiryDate}
+                                    onChange={(e) =>
+                                      setCycleBullPrintForm((prev) => ({ ...prev, expiryDate: e.target.value }))
+                                    }
+                                    className="w-full rounded-lg border border-slate-800 bg-slate-950 p-1.5 text-xs text-white"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Clear override action if blocked */}
+                          {selectedUser.cycleBullPrintAccess?.isOverrideBlocked && (
+                            <div className="mt-3">
+                              <button
+                                type="button"
+                                onClick={() => handleClearOverride("cycle_bull_print")}
+                                className="w-full rounded-lg border border-sky-800 bg-sky-950/40 py-1 text-[10px] font-bold text-sky-400 hover:bg-sky-900/40 transition flex items-center justify-center gap-1"
+                              >
+                                <RotateCcw size={11} />
+                                <span>Clear Block & Restore Automatic</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSaveAccess("cycle_bull_print")}
+                          disabled={savingAccessType === "cycle_bull_print"}
+                          className="w-full rounded-xl bg-teal-600 hover:bg-teal-500 py-2 text-xs font-bold text-white transition flex items-center justify-center gap-1.5"
+                        >
+                          {savingAccessType === "cycle_bull_print" && <Loader2 size={13} className="animate-spin" />}
+                          <span>Save Cycle Bull Print</span>
                         </button>
                       </div>
 
