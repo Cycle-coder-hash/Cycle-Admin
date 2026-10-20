@@ -4,6 +4,7 @@ import { AdminSidebar } from "./components/AdminSidebar";
 import { DashboardOverview } from "./pages/DashboardOverview";
 import { PaymentApprovals } from "./pages/PaymentApprovals";
 import { StudentManagement } from "./pages/StudentManagement";
+import { MentorControlCMS } from "./pages/MentorControlCMS";
 import { UserManagement } from "./pages/UserManagement";
 import { PlatformSettings } from "./pages/PlatformSettings";
 import { AuditLogs } from "./pages/AuditLogs";
@@ -29,6 +30,7 @@ const tabTitles: Record<string, string> = {
   orders: "Payment Verification Queue",
   users: "User Management & Access Control",
   students: "Student & Access Management",
+  mentor: "Official 1-on-1 Mentor Control",
   library: "Library & Course Management CMS",
   community: "Community Feed & Discourse Moderation",
   ebooks: "Free eBooks & PDF Library CMS",
@@ -242,6 +244,7 @@ export const App: React.FC = () => {
               onUpdateRole={updateRole}
             />
           )}
+          {activeTab === "mentor" && <MentorControlCMS />}
           {activeTab === "community" && <CommunityModeration />}
           {activeTab === "library" && (
             <LibraryManagement
