@@ -5,7 +5,6 @@ import { DashboardOverview } from "./pages/DashboardOverview";
 import { PaymentApprovals } from "./pages/PaymentApprovals";
 import { StudentManagement } from "./pages/StudentManagement";
 import { UserManagement } from "./pages/UserManagement";
-import { SupportMessages } from "./pages/SupportMessages";
 import { PlatformSettings } from "./pages/PlatformSettings";
 import { AuditLogs } from "./pages/AuditLogs";
 import { EbookManagement } from "./pages/EbookManagement";
@@ -20,7 +19,6 @@ import {
   useOrders,
   useStudents,
   useEbooks,
-  useSupportConversations,
   usePlatformSettings,
   useOwnerProfile,
 } from "./hooks";
@@ -36,7 +34,6 @@ const tabTitles: Record<string, string> = {
   ebooks: "Free eBooks & PDF Library CMS",
   "social-proof": "Social Proof Row Management",
   owner: "Cycle Social ID",
-  support: "Customer Support Messages",
   settings: "Gateway & Platform Settings",
   leaderboard: "Global Leaderboard Scoring Matrix",
   audit: "Security & Audit Event Trail",
@@ -93,12 +90,6 @@ export const App: React.FC = () => {
   } = useEbooks();
 
   const {
-    unreadMessagesCount,
-    loading: loadingSupport,
-    reload: reloadSupport,
-  } = useSupportConversations();
-
-  const {
     config: paymentConfig,
     logs,
     isSaving: isSavingPayment,
@@ -148,10 +139,9 @@ export const App: React.FC = () => {
       loadingOrders ||
       loadingStudents ||
       loadingEbooks ||
-      loadingSupport ||
       loadingSettings ||
       loadingOwner,
-    [loadingOrders, loadingStudents, loadingEbooks, loadingSupport, loadingSettings, loadingOwner]
+    [loadingOrders, loadingStudents, loadingEbooks, loadingSettings, loadingOwner]
   );
 
   const handleGlobalRefresh = useCallback(async () => {
@@ -159,11 +149,10 @@ export const App: React.FC = () => {
       reloadOrders(),
       reloadStudents(),
       reloadEbooks(),
-      reloadSupport(),
       reloadSettings(),
       reloadOwner(),
     ]);
-  }, [reloadOrders, reloadStudents, reloadEbooks, reloadSupport, reloadSettings, reloadOwner]);
+  }, [reloadOrders, reloadStudents, reloadEbooks, reloadSettings, reloadOwner]);
 
   const activeActionMessage =
     orderMsg || studentMsg || ebookMsg || settingsMsg || ownerMsg;
@@ -182,7 +171,6 @@ export const App: React.FC = () => {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         pendingOrdersCount={pendingOrdersCount}
-        unreadMessagesCount={unreadMessagesCount}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={toggleSidebar}
         isMobileOpen={isMobileSidebarOpen}
@@ -283,7 +271,6 @@ export const App: React.FC = () => {
               isSaving={isSavingOwner}
             />
           )}
-          {activeTab === "support" && <SupportMessages onReload={reloadSupport} />}
           {activeTab === "settings" && (
             <PlatformSettings
               config={paymentConfig}

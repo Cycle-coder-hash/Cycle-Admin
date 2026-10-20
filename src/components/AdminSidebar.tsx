@@ -55,12 +55,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     { id: "students", label: "Students & Access", icon: Users },
     { id: "community", label: "Community Feed", icon: MessagesSquare },
     { id: "library", label: "Library Management", icon: BookOpen },
-    {
-      id: "support",
-      label: "Support Messages",
-      icon: MessageSquare,
-      badge: displayUnread > 0 ? `${displayUnread}` : undefined,
-    },
     { id: "social-proof", label: "Social Proof", icon: Sparkles },
     { id: "owner", label: "Cycle Social ID", icon: Share2 },
     { id: "settings", label: "Gateways & Notice", icon: KeyRound },
