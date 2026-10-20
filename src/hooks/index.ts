@@ -6,3 +6,4 @@ export * from "./usePlatformSettings";
 export * from "./useOwnerProfile";
 export * from "./useUserManagement";
 export * from "./useSupportDesk";
+export * from "./useSocialProof";

@@ -11,6 +11,7 @@ import { AuditLogs } from "./pages/AuditLogs";
 import { EbookManagement } from "./pages/EbookManagement";
 import { LibraryManagement } from "./pages/LibraryManagement";
 import { OwnerProfileCMS } from "./pages/OwnerProfileCMS";
+import { SocialProofCMS } from "./pages/SocialProofCMS";
 import { LeaderboardSettings } from "./pages/LeaderboardSettings";
 import { CommunityModeration } from "./pages/CommunityModeration";
 import { EbookModal } from "./modals/EbookModal";
@@ -33,7 +34,8 @@ const tabTitles: Record<string, string> = {
   library: "Library & Course Management CMS",
   community: "Community Feed & Discourse Moderation",
   ebooks: "Free eBooks & PDF Library CMS",
-  owner: "Owner & Founder Profile CMS",
+  "social-proof": "Social Proof Row Management",
+  owner: "Cycle Social ID",
   support: "Customer Support Messages",
   settings: "Gateway & Platform Settings",
   leaderboard: "Global Leaderboard Scoring Matrix",
@@ -272,6 +274,7 @@ export const App: React.FC = () => {
               onDeleteEbook={(id) => setDeleteConfirmEbookId(id)}
             />
           )}
+          {activeTab === "social-proof" && <SocialProofCMS />}
           {activeTab === "owner" && (
             <OwnerProfileCMS
               profile={ownerProfile}
