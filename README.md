@@ -32,3 +32,12 @@ pnpm run dev:admin
 
 The admin console is accessible at:
 👉 `http://localhost:3001`
+
+---
+
+## 🔒 Security Notice & Credential Rotation Warning
+
+> ### ⚠️ CRITICAL NOTICE: ROTATE PREVIOUSLY EXPOSED SECRETS
+> In accordance with the Pre-Launch Security Audit, all hardcoded credentials and fallbacks have been eliminated from the source code.
+> Any previously committed keys in git history (including the Supabase anon key, ImgBB key, and legacy admin master passcode) must be rotated in their respective service dashboards immediately before deploying to production.
+> Configure all credentials via `.env.local` or environment variables and never commit real secret files to version control.
