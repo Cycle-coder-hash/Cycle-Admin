@@ -15,6 +15,7 @@ import { SocialProofCMS } from "./pages/SocialProofCMS";
 import { LeaderboardSettings } from "./pages/LeaderboardSettings";
 import { CommunityModeration } from "./pages/CommunityModeration";
 import { SupportMessages } from "./pages/SupportMessages";
+import { AiReportCMS } from "./pages/AiReportCMS";
 import { EbookModal } from "./modals/EbookModal";
 import { DeleteEbookModal } from "./modals/DeleteEbookModal";
 import {
@@ -33,6 +34,7 @@ const tabTitles: Record<string, string> = {
   users: "User Management & Access Control",
   students: "Student & Access Management",
   mentor: "Official 1-on-1 Mentor Control",
+  "ai-report": "Cycle AI Engine & OpenRouter CMS",
   library: "Library & Course Management CMS",
   community: "Community Feed & Discourse Moderation",
   support: "Support Messages",
@@ -257,6 +259,7 @@ export const App: React.FC = () => {
             />
           )}
           {activeTab === "mentor" && <MentorControlCMS />}
+          {activeTab === "ai-report" && <AiReportCMS />}
           {activeTab === "community" && <CommunityModeration />}
           {activeTab === "library" && (
             <LibraryManagement

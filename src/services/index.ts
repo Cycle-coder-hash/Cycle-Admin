@@ -12,6 +12,7 @@ export * from "./CourseService";
 export * from "./CommunityService";
 export * from "./SocialProofService";
 export * from "./MentorService";
+export * from "./AiReportService";
 
 import { defaultOrderService } from "./OrderService";
 import { defaultUserService } from "./UserService";
@@ -23,6 +24,7 @@ import { CourseService } from "./CourseService";
 import { defaultCommunityService } from "./CommunityService";
 import { defaultSocialProofService } from "./SocialProofService";
 import { defaultMentorService } from "./MentorService";
+import { defaultAiReportService } from "./AiReportService";
 
 export const defaultCourseService = new CourseService();
 
@@ -37,4 +39,5 @@ export const services = {
   community: defaultCommunityService,
   socialProof: defaultSocialProofService,
   mentor: defaultMentorService,
+  aiReport: defaultAiReportService,
 } as const;
