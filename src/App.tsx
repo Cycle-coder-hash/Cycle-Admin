@@ -14,12 +14,14 @@ import { OwnerProfileCMS } from "./pages/OwnerProfileCMS";
 import { SocialProofCMS } from "./pages/SocialProofCMS";
 import { LeaderboardSettings } from "./pages/LeaderboardSettings";
 import { CommunityModeration } from "./pages/CommunityModeration";
+import { SupportMessages } from "./pages/SupportMessages";
 import { EbookModal } from "./modals/EbookModal";
 import { DeleteEbookModal } from "./modals/DeleteEbookModal";
 import {
   useOrders,
   useStudents,
   useEbooks,
+  useSupportConversations,
   usePlatformSettings,
   useOwnerProfile,
 } from "./hooks";
@@ -33,6 +35,7 @@ const tabTitles: Record<string, string> = {
   mentor: "Official 1-on-1 Mentor Control",
   library: "Library & Course Management CMS",
   community: "Community Feed & Discourse Moderation",
+  support: "Support Messages",
   ebooks: "Free eBooks & PDF Library CMS",
   "social-proof": "Social Proof Row Management",
   owner: "Cycle Social ID",
@@ -112,6 +115,12 @@ export const App: React.FC = () => {
     clearActionMessage: clearOwnerMsg,
   } = useOwnerProfile();
 
+  const {
+    unreadMessagesCount,
+    loading: loadingSupport,
+    reload: reloadSupport,
+  } = useSupportConversations();
+
   // Collapsible Sidebar State
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
@@ -141,9 +150,10 @@ export const App: React.FC = () => {
       loadingOrders ||
       loadingStudents ||
       loadingEbooks ||
+      loadingSupport ||
       loadingSettings ||
       loadingOwner,
-    [loadingOrders, loadingStudents, loadingEbooks, loadingSettings, loadingOwner]
+    [loadingOrders, loadingStudents, loadingEbooks, loadingSupport, loadingSettings, loadingOwner]
   );
 
   const handleGlobalRefresh = useCallback(async () => {
@@ -151,10 +161,11 @@ export const App: React.FC = () => {
       reloadOrders(),
       reloadStudents(),
       reloadEbooks(),
+      reloadSupport(),
       reloadSettings(),
       reloadOwner(),
     ]);
-  }, [reloadOrders, reloadStudents, reloadEbooks, reloadSettings, reloadOwner]);
+  }, [reloadOrders, reloadStudents, reloadEbooks, reloadSupport, reloadSettings, reloadOwner]);
 
   const activeActionMessage =
     orderMsg || studentMsg || ebookMsg || settingsMsg || ownerMsg;
@@ -173,6 +184,7 @@ export const App: React.FC = () => {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         pendingOrdersCount={pendingOrdersCount}
+        unreadMessagesCount={unreadMessagesCount}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={toggleSidebar}
         isMobileOpen={isMobileSidebarOpen}
@@ -265,6 +277,7 @@ export const App: React.FC = () => {
               onDeleteEbook={(id) => setDeleteConfirmEbookId(id)}
             />
           )}
+          {activeTab === "support" && <SupportMessages onReload={reloadSupport} />}
           {activeTab === "social-proof" && <SocialProofCMS />}
           {activeTab === "owner" && (
             <OwnerProfileCMS

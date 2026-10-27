@@ -380,7 +380,7 @@ export const SupportMessages: React.FC<SupportMessagesProps> = ({ onReload }) =>
                                   isAdmin ? "text-sky-200" : "text-sky-400"
                                 }`}
                               >
-                                {isAdmin ? "Support Staff" : activeConversation.customer?.name || "Customer"}
+                                {isAdmin ? "Cycle Support" : activeConversation.customer?.name || "Customer"}
                               </span>
                               <span
                                 className={`text-[9px] ${
@@ -439,8 +439,8 @@ export const SupportMessages: React.FC<SupportMessagesProps> = ({ onReload }) =>
                   />
 
                   <div className="flex items-center justify-between border-t border-slate-850 pt-2 mt-1">
-                    <span className="text-[10px] text-slate-500">
-                      Direct 1-on-1 dialogue with customer
+                    <span className="text-[11px] text-[#93a3c0]">
+                      Replying as <b className="text-[#7fb4ff]">Cycle Support</b> — appears in the user's Support chat
                     </span>
 
                     <div className="flex items-center gap-2">
