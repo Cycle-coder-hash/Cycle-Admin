@@ -14,6 +14,7 @@ import {
   UserCog,
   MessagesSquare,
   Cpu,
+  Brain,
   ChevronLeft,
   ChevronRight,
   X,
@@ -56,6 +57,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     { id: "students", label: "Students & Access", icon: Users },
     { id: "mentor", label: "Mentor Control", icon: UserCheck },
     { id: "ai-report", label: "Cycle AI Engine", icon: Cpu },
+    { id: "psychology", label: "Psychology Feed", icon: Brain },
     { id: "community", label: "Community Feed", icon: MessagesSquare },
     { id: "library", label: "Library Management", icon: BookOpen },
     {

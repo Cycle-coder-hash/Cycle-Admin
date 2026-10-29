@@ -16,6 +16,7 @@ import { LeaderboardSettings } from "./pages/LeaderboardSettings";
 import { CommunityModeration } from "./pages/CommunityModeration";
 import { SupportMessages } from "./pages/SupportMessages";
 import { AiReportCMS } from "./pages/AiReportCMS";
+import { PsychologyCMS } from "./pages/PsychologyCMS";
 import { EbookModal } from "./modals/EbookModal";
 import { DeleteEbookModal } from "./modals/DeleteEbookModal";
 import {
@@ -35,6 +36,7 @@ const tabTitles: Record<string, string> = {
   students: "Student & Access Management",
   mentor: "Official 1-on-1 Mentor Control",
   "ai-report": "Cycle AI Engine & OpenRouter CMS",
+  psychology: "Psychology Feed & Mindset CMS",
   library: "Library & Course Management CMS",
   community: "Community Feed & Discourse Moderation",
   support: "Support Messages",
@@ -260,6 +262,7 @@ export const App: React.FC = () => {
           )}
           {activeTab === "mentor" && <MentorControlCMS />}
           {activeTab === "ai-report" && <AiReportCMS />}
+          {activeTab === "psychology" && <PsychologyCMS />}
           {activeTab === "community" && <CommunityModeration />}
           {activeTab === "library" && (
             <LibraryManagement
