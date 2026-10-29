@@ -168,7 +168,7 @@ export class SettingsService extends HttpClient implements ISettingsService {
     }
 
     try {
-      await this.supabase.post("settings", {
+      await this.supabase.post("settings?on_conflict=key", {
         key: "payment_gateways_config",
         value: JSON.stringify(config),
       }, { Prefer: "resolution=merge-duplicates" });
@@ -217,7 +217,7 @@ export class SettingsService extends HttpClient implements ISettingsService {
     }
 
     try {
-      await this.supabase.post("settings", {
+      await this.supabase.post("settings?on_conflict=key", {
         key: "course_telegram_popup_config",
         value: JSON.stringify(result),
       }, { Prefer: "resolution=merge-duplicates" });
@@ -266,7 +266,7 @@ export class SettingsService extends HttpClient implements ISettingsService {
     }
 
     try {
-      await this.supabase.post("settings", {
+      await this.supabase.post("settings?on_conflict=key", {
         key: "leaderboard_settings",
         value: JSON.stringify(result),
       }, { Prefer: "resolution=merge-duplicates" });

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { X, Upload, CheckCircle2, AlertCircle, Camera, ShieldCheck, Loader2 } from "lucide-react";
-import { SocialProofEntry, defaultSocialProofService } from "../services/SocialProofService";
+import { SocialProofEntry, defaultSocialProofService, mapBadgeToManual } from "../services/SocialProofService";
 
 interface SocialProofModalProps {
   isOpen: boolean;
@@ -19,6 +19,7 @@ export const SocialProofModal: React.FC<SocialProofModalProps> = ({
 }) => {
   const [name, setName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [role, setRole] = useState("Trader");
   const [badge, setBadge] = useState<"FREE" | "PRO" | "PREMIUM" | "STUDENT">("STUDENT");
   const [reviewText, setReviewText] = useState("");
   const [hasConsent, setHasConsent] = useState(false);
@@ -31,14 +32,16 @@ export const SocialProofModal: React.FC<SocialProofModalProps> = ({
   useEffect(() => {
     if (entry) {
       setName(entry.name || "");
-      setAvatarUrl(entry.avatarUrl || "");
+      setAvatarUrl(entry.avatarUrl || entry.photoUrl || "");
+      setRole(entry.role || "Trader");
       setBadge(entry.badge || "STUDENT");
-      setReviewText(entry.reviewText || "");
-      setHasConsent(entry.hasConsent ?? true);
+      setReviewText(entry.reviewText || entry.testimonialQuote || "");
+      setHasConsent(entry.hasConsent ?? entry.isConsentConfirmed ?? true);
       setIsActive(entry.isActive ?? true);
     } else {
       setName("");
       setAvatarUrl("");
+      setRole("Trader");
       setBadge("STUDENT");
       setReviewText("");
       setHasConsent(false);
@@ -97,13 +100,21 @@ export const SocialProofModal: React.FC<SocialProofModalProps> = ({
       await onSave({
         id: entry?.id || `sp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         userId: entry?.userId || null,
+        linkedUserId: entry?.linkedUserId,
         name: name.trim(),
         avatarUrl: avatarUrl.trim(),
+        photoUrl: avatarUrl.trim(),
+        role: role.trim() || "Trader",
         badge,
+        manualBadge: mapBadgeToManual(badge),
         reviewText: reviewText.trim() || undefined,
+        testimonialQuote: reviewText.trim() || undefined,
         hasConsent: true,
+        isConsentConfirmed: true,
         isActive,
         order: entry?.order,
+        displayOrder: entry?.order,
+        mode: entry?.mode || (entry?.userId ? "linked" : "manual"),
       });
       onClose();
     } catch (err: any) {
@@ -202,6 +213,20 @@ export const SocialProofModal: React.FC<SocialProofModalProps> = ({
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-xs font-bold text-white placeholder:text-slate-600 outline-none focus:border-sky-500"
+            />
+          </div>
+
+          {/* Role / Trading Category */}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+              Role / Trading Category
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. SMC & Liquidity Trader, Futures Trader"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-xs text-white placeholder:text-slate-600 outline-none focus:border-sky-500"
             />
           </div>
 

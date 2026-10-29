@@ -29,6 +29,24 @@ export interface PsychologyManagerItem {
   updatedAt: string | null;
 }
 
+export interface AdminPsychologyNotification {
+  id: number;
+  recipientUserId: number;
+  type: "love" | "comment" | "admin_reply";
+  postId: string;
+  commentId: number | null;
+  parentCommentId: number | null;
+  actorId: number;
+  actorName: string;
+  actorAvatar: string | null;
+  title: string;
+  message: string;
+  read: boolean;
+  readAt: string | null;
+  createdAt: string;
+  targetUrl: string;
+}
+
 export interface CreatePostPayload {
   content: string;
   photoUrl?: string | null;
@@ -187,6 +205,62 @@ export class PsychologyService extends HttpClient {
       payload
     );
     return { success: Boolean(res?.success) };
+  }
+
+  /**
+   * List live activity notifications (loves, comments, replies).
+   */
+  public async getNotifications(options?: {
+    limit?: number;
+    unreadOnly?: boolean;
+  }): Promise<{ items: AdminPsychologyNotification[]; unreadCount: number }> {
+    const params = new URLSearchParams();
+    if (options?.limit) params.set("limit", String(options.limit));
+    if (options?.unreadOnly) params.set("unreadOnly", "true");
+    const query = params.toString() ? `?${params.toString()}` : "";
+
+    try {
+      const res = await this.get<{
+        success: boolean;
+        items: AdminPsychologyNotification[];
+        unreadCount: number;
+      }>(`/psychology/notifications${query}`);
+      if (res?.success) {
+        return {
+          items: res.items || [],
+          unreadCount: res.unreadCount || 0,
+        };
+      }
+    } catch (err) {
+      console.warn("[PsychologyService.getNotifications notice]:", err);
+    }
+    return { items: [], unreadCount: 0 };
+  }
+
+  /**
+   * Mark an activity notification as read.
+   */
+  public async markNotificationRead(notificationId: number): Promise<{ success: boolean }> {
+    const res = await this.post<{ success: boolean }>(
+      `/psychology/notifications/${notificationId}/read`,
+      {}
+    );
+    return { success: Boolean(res?.success) };
+  }
+
+  /**
+   * Post an official Full Admin reply to a user comment.
+   */
+  public async replyToComment(
+    postId: string,
+    commentId: number,
+    content: string
+  ): Promise<{ success: boolean; reply?: any }> {
+    const res = await this.post<{ success: boolean; reply?: any }>(
+      `/psychology/posts/${encodeURIComponent(postId)}/comments/${commentId}/reply`,
+      { content }
+    );
+    return { success: Boolean(res?.success), reply: res?.reply };
   }
 
   /**

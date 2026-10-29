@@ -75,7 +75,7 @@ export class EbookService extends HttpClient implements IEbookService {
       updatedAt: new Date().toISOString(),
     };
     existing.unshift(newEbook);
-    await this.supabase.post("settings", {
+    await this.supabase.post("settings?on_conflict=key", {
       key: "free_ebooks",
       value: JSON.stringify(existing),
     }, { Prefer: "resolution=merge-duplicates" });
@@ -117,7 +117,7 @@ export class EbookService extends HttpClient implements IEbookService {
     const idx = existing.findIndex((e: any) => e.id === id);
     if (idx !== -1) {
       existing[idx] = { ...existing[idx], ...finalPayload, updatedAt: new Date().toISOString() };
-      await this.supabase.post("settings", {
+      await this.supabase.post("settings?on_conflict=key", {
         key: "free_ebooks",
         value: JSON.stringify(existing),
       }, { Prefer: "resolution=merge-duplicates" });
@@ -138,7 +138,7 @@ export class EbookService extends HttpClient implements IEbookService {
     if (rows && rows[0]?.value) {
       const existing = JSON.parse(rows[0].value);
       const filtered = existing.filter((e: any) => e.id !== id);
-      await this.supabase.post("settings", {
+      await this.supabase.post("settings?on_conflict=key", {
         key: "free_ebooks",
         value: JSON.stringify(filtered),
       }, { Prefer: "resolution=merge-duplicates" });

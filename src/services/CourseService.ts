@@ -112,7 +112,7 @@ export class CourseService extends HttpClient implements ICourseService {
     };
     const key = `course_album_meta_${courseId.replace(/-/g, "_")}`;
     try {
-      await fetch(`${APP_CONFIG.SUPABASE_URL}/settings`, {
+      await fetch(`${APP_CONFIG.SUPABASE_URL}/settings?on_conflict=key`, {
         method: "POST",
         headers: {
           apikey: APP_CONFIG.SUPABASE_KEY,
@@ -194,7 +194,7 @@ export class CourseService extends HttpClient implements ICourseService {
     const updated = [...existing, newClass].sort((a, b) => (a.order || 0) - (b.order || 0));
     const key = `course_classes_${courseId.replace(/-/g, "_")}`;
     try {
-      await fetch(`${APP_CONFIG.SUPABASE_URL}/settings`, {
+      await fetch(`${APP_CONFIG.SUPABASE_URL}/settings?on_conflict=key`, {
         method: "POST",
         headers: {
           apikey: APP_CONFIG.SUPABASE_KEY,
@@ -240,7 +240,7 @@ export class CourseService extends HttpClient implements ICourseService {
     existing.sort((a, b) => (a.order || 0) - (b.order || 0));
     const key = `course_classes_${courseId.replace(/-/g, "_")}`;
     try {
-      await fetch(`${APP_CONFIG.SUPABASE_URL}/settings`, {
+      await fetch(`${APP_CONFIG.SUPABASE_URL}/settings?on_conflict=key`, {
         method: "POST",
         headers: {
           apikey: APP_CONFIG.SUPABASE_KEY,
@@ -271,7 +271,7 @@ export class CourseService extends HttpClient implements ICourseService {
     const resequenced = filtered.map((c, i) => ({ ...c, order: i + 1 }));
     const key = `course_classes_${courseId.replace(/-/g, "_")}`;
     try {
-      await fetch(`${APP_CONFIG.SUPABASE_URL}/settings`, {
+      await fetch(`${APP_CONFIG.SUPABASE_URL}/settings?on_conflict=key`, {
         method: "POST",
         headers: {
           apikey: APP_CONFIG.SUPABASE_KEY,
@@ -318,7 +318,7 @@ export class CourseService extends HttpClient implements ICourseService {
     });
     const key = `course_classes_${courseId.replace(/-/g, "_")}`;
     try {
-      await fetch(`${APP_CONFIG.SUPABASE_URL}/settings`, {
+      await fetch(`${APP_CONFIG.SUPABASE_URL}/settings?on_conflict=key`, {
         method: "POST",
         headers: {
           apikey: APP_CONFIG.SUPABASE_KEY,
@@ -363,7 +363,7 @@ export class CourseService extends HttpClient implements ICourseService {
           Array.from(map.values()).forEach((rem: any) => {
             reordered.push({ ...rem, position: nextPos++, updatedAt: new Date().toISOString() });
           });
-          await fetch(`${APP_CONFIG.SUPABASE_URL}/settings`, {
+          await fetch(`${APP_CONFIG.SUPABASE_URL}/settings?on_conflict=key`, {
             method: "POST",
             headers: {
               apikey: APP_CONFIG.SUPABASE_KEY,

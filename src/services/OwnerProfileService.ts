@@ -70,7 +70,7 @@ export class OwnerProfileService extends HttpClient implements IOwnerProfileServ
     }
 
     try {
-      await this.supabase.post("settings", {
+      await this.supabase.post("settings?on_conflict=key", {
         key: "owner_profile",
         value: JSON.stringify(updatedProfile),
       }, { Prefer: "resolution=merge-duplicates" });

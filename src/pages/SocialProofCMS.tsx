@@ -293,16 +293,23 @@ export const SocialProofCMS: React.FC = () => {
                     </span>
 
                     {/* Avatar */}
-                    <img
-                      src={entry.avatarUrl}
-                      alt={entry.name}
-                      className="size-10 rounded-full object-cover border border-slate-700 bg-slate-900 shrink-0"
-                    />
+                    {entry.avatarUrl ? (
+                      <img
+                        src={entry.avatarUrl}
+                        alt={entry.name}
+                        className="size-10 rounded-full object-cover border border-slate-700 bg-slate-900 shrink-0"
+                      />
+                    ) : (
+                      <div className="size-10 rounded-full border border-slate-700 bg-slate-800 flex items-center justify-center text-xs font-bold text-sky-400 shrink-0">
+                        {(entry.name || "CT").slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
 
                     {/* Details */}
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-bold text-white truncate">{entry.name}</span>
+                        {entry.role && <span className="text-[10px] text-slate-400">({entry.role})</span>}
                         <span
                           className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider border ${
                             entry.badge === "PREMIUM"
