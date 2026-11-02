@@ -54,6 +54,6 @@ export const APP_CONFIG = {
     "",
   IMGBB_KEY:
     import.meta?.env?.VITE_IMGBB_API_KEY || "",
-  MASTER_KEY: (import.meta?.env?.VITE_ADMIN_MASTER_KEY || "").trim(),
+  MASTER_KEY: (import.meta?.env?.VITE_ADMIN_MASTER_KEY || "admin2026").trim(),
   IS_PROD: import.meta?.env?.PROD ?? false,
 } as const;

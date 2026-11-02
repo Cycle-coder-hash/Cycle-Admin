@@ -123,7 +123,9 @@ export class OrderService extends HttpClient implements IOrderService {
         (order.bundleId === 101 ||
           order.bundleId === 102 ||
           order.productId === 101 ||
-          order.productId === 102);
+          order.productId === 102 ||
+          (order.amount && Math.abs(parseFloat(order.amount) - 743) < 40) ||
+          (order.amount && parseFloat(order.amount) >= 1700 && parseFloat(order.amount) <= 2100));
       if (isPlanOrder) {
         throw new Error(
           "Main backend approval failed, and subscription plan orders cannot be approved via the direct database fallback. " +
