@@ -103,10 +103,12 @@ export class OrderService extends HttpClient implements IOrderService {
   }
 
   public async approveOrder(orderId: number): Promise<{ success: boolean }> {
+    let primaryError: any = null;
     try {
       const data = await this.post<{ success?: boolean }>("/approve-order", { orderId });
       if (data?.success) return { success: true };
     } catch (err) {
+      primaryError = err;
       console.warn("[approveOrder primary failed, trying Supabase direct]:", err);
     }
 
@@ -114,7 +116,23 @@ export class OrderService extends HttpClient implements IOrderService {
       const orderData = await this.supabase.fetchRaw<any[]>("orders", `id=eq.${orderId}&select=*`);
       const order = Array.isArray(orderData) ? orderData[0] : null;
 
-      await this.supabase.put(`orders?id=eq.${orderId}`, {
+      // The direct Supabase fallback cannot activate a Pro/Premium subscription (that logic lives
+      // only in the main backend). Never mark such orders approved without activating the plan.
+      const isPlanOrder =
+        order &&
+        (order.bundleId === 101 ||
+          order.bundleId === 102 ||
+          order.productId === 101 ||
+          order.productId === 102);
+      if (isPlanOrder) {
+        throw new Error(
+          "Main backend approval failed, and subscription plan orders cannot be approved via the direct database fallback. " +
+            "Primary error: " +
+            (primaryError?.message || "unknown")
+        );
+      }
+
+      await this.supabase.patch(`orders?id=eq.${orderId}`, {
         paymentStatus: "approved",
         orderStatus: "approved",
         approvedAt: new Date().toISOString(),
@@ -139,7 +157,10 @@ export class OrderService extends HttpClient implements IOrderService {
 
       return { success: true };
     } catch (err: any) {
-      throw new Error(err.message || "Failed to approve order");
+      throw new Error(
+        (err.message || "Failed to approve order") +
+          (primaryError ? ` | Primary backend error: ${primaryError.message}` : "")
+      );
     }
   }
 
@@ -152,7 +173,7 @@ export class OrderService extends HttpClient implements IOrderService {
     }
 
     try {
-      await this.supabase.put(`orders?id=eq.${orderId}`, {
+      await this.supabase.patch(`orders?id=eq.${orderId}`, {
         paymentStatus: "rejected",
         orderStatus: "rejected",
         rejectionReason: reason,

@@ -156,7 +156,7 @@ export class UserService extends HttpClient implements IUserService {
     }
 
     try {
-      await this.supabase.put(`users?id=eq.${userId}`, {
+      await this.supabase.patch(`users?id=eq.${userId}`, {
         role,
         updatedAt: new Date().toISOString(),
       });

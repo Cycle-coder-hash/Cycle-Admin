@@ -78,6 +78,14 @@ export class HttpClient {
     });
   }
 
+  public async patch<T = any>(path: string, body?: any, headers?: Record<string, string>): Promise<T> {
+    return this.request<T>(path, {
+      method: "PATCH",
+      body: body ? JSON.stringify(body) : undefined,
+      headers,
+    });
+  }
+
   public async delete<T = any>(path: string, headers?: Record<string, string>): Promise<T> {
     return this.request<T>(path, { method: "DELETE", headers });
   }
