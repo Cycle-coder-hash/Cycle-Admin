@@ -2,7 +2,6 @@ import React from "react";
 import {
   LayoutDashboard,
   FileCheck2,
-  Users,
   MessageSquare,
   KeyRound,
   Shield,
@@ -54,7 +53,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       badge: pendingOrdersCount > 0 ? `${pendingOrdersCount}` : undefined,
     },
     { id: "users", label: "User Management", icon: UserCog },
-    { id: "students", label: "Students & Access", icon: Users },
     { id: "mentor", label: "Mentor Control", icon: UserCheck },
     { id: "ai-report", label: "Cycle AI Engine", icon: Cpu },
     { id: "psychology", label: "Psychology Feed", icon: Brain },

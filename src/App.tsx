@@ -3,7 +3,6 @@ import { AdminHeader } from "./components/AdminHeader";
 import { AdminSidebar } from "./components/AdminSidebar";
 import { DashboardOverview } from "./pages/DashboardOverview";
 import { PaymentApprovals } from "./pages/PaymentApprovals";
-import { StudentManagement } from "./pages/StudentManagement";
 import { MentorControlCMS } from "./pages/MentorControlCMS";
 import { UserManagement } from "./pages/UserManagement";
 import { PlatformSettings } from "./pages/PlatformSettings";
@@ -33,7 +32,6 @@ const tabTitles: Record<string, string> = {
   overview: "Executive Performance Overview",
   orders: "Payment Verification Queue",
   users: "User Management & Access Control",
-  students: "Student & Access Management",
   mentor: "Official 1-on-1 Mentor Control",
   "ai-report": "Cycle AI Engine & OpenRouter CMS",
   psychology: "Psychology Feed & Mindset CMS",
@@ -68,10 +66,6 @@ export const App: React.FC = () => {
     students,
     loading: loadingStudents,
     reload: reloadStudents,
-    grantAccess,
-    updateRole,
-    actionMessage: studentMsg,
-    clearActionMessage: clearStudentMsg,
   } = useStudents();
 
   const {
@@ -172,11 +166,10 @@ export const App: React.FC = () => {
   }, [reloadOrders, reloadStudents, reloadEbooks, reloadSupport, reloadSettings, reloadOwner]);
 
   const activeActionMessage =
-    orderMsg || studentMsg || ebookMsg || settingsMsg || ownerMsg;
+    orderMsg || ebookMsg || settingsMsg || ownerMsg;
 
   const handleClearActionMessage = () => {
     clearOrderMsg();
-    clearStudentMsg();
     clearEbookMsg();
     clearSettingsMsg();
     clearOwnerMsg();
@@ -253,13 +246,7 @@ export const App: React.FC = () => {
             />
           )}
           {activeTab === "users" && <UserManagement />}
-          {activeTab === "students" && (
-            <StudentManagement
-              students={students}
-              onGrantAccess={grantAccess}
-              onUpdateRole={updateRole}
-            />
-          )}
+
           {activeTab === "mentor" && <MentorControlCMS />}
           {activeTab === "ai-report" && <AiReportCMS />}
           {activeTab === "psychology" && <PsychologyCMS />}

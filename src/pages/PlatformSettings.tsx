@@ -14,7 +14,7 @@ import {
   Send,
   ExternalLink,
 } from "lucide-react";
-import { BkashLogo, NagadLogo, RocketLogo } from "../components/PaymentIcons";
+import { BkashLogo } from "../components/PaymentIcons";
 import { PaymentSettingsConfig, defaultPaymentConfig } from "../lib/api";
 
 interface PlatformSettingsProps {
@@ -42,7 +42,7 @@ export const PlatformSettings: React.FC<PlatformSettingsProps> = ({
 
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [selectedPreviewMethod, setSelectedPreviewMethod] = useState<"bkash" | "nagad" | "rocket">("bkash");
+  const [selectedPreviewMethod, setSelectedPreviewMethod] = useState<"bkash">("bkash");
 
   useEffect(() => {
     if (config) {
@@ -81,7 +81,7 @@ export const PlatformSettings: React.FC<PlatformSettingsProps> = ({
     setTimeout(() => setSaveSuccess(false), 3500);
   };
 
-  const activeCount = [form.bkash.enabled, form.nagad.enabled, form.rocket.enabled].filter(Boolean).length;
+  const activeCount = [form.bkash.enabled].filter(Boolean).length;
 
   return (
     <div className="space-y-8 animate-in fade-in">
@@ -145,7 +145,7 @@ export const PlatformSettings: React.FC<PlatformSettingsProps> = ({
             Active Gateways
           </div>
           <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-2xl font-black text-emerald-400">{activeCount} / 3</span>
+            <span className="text-2xl font-black text-emerald-400">{activeCount} / 1</span>
             <span className="text-xs text-slate-500">online</span>
           </div>
         </div>
@@ -155,8 +155,8 @@ export const PlatformSettings: React.FC<PlatformSettingsProps> = ({
             Disabled Gateways
           </div>
           <div className="mt-1 flex items-baseline gap-2">
-            <span className={`text-2xl font-black ${3 - activeCount > 0 ? "text-amber-400" : "text-slate-400"}`}>
-              {3 - activeCount} / 3
+            <span className={`text-2xl font-black ${1 - activeCount > 0 ? "text-amber-400" : "text-slate-400"}`}>
+              {1 - activeCount} / 1
             </span>
             <span className="text-xs text-slate-500">hidden</span>
           </div>
@@ -300,258 +300,6 @@ export const PlatformSettings: React.FC<PlatformSettingsProps> = ({
                 }
                 placeholder="Send Money করুন এবং ট্রানজেকশন আইডি (TrxID) দিন"
                 className="mt-1.5 w-full rounded-xl border border-slate-800 bg-slate-900/90 p-2.5 text-xs text-white outline-none focus:border-[#E2136E]"
-              />
-            </div>
-          </div>
-
-          {/* Nagad Gateway Card */}
-          <div
-            className={`rounded-3xl border transition-all p-6 space-y-5 ${
-              form.nagad.enabled
-                ? "border-[#F97316]/30 bg-[#F97316]/5"
-                : "border-slate-800 bg-[#070e1b] opacity-75"
-            }`}
-          >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800/80">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-28 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-center p-2 shrink-0">
-                  <NagadLogo size={24} />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-black text-white">Nagad (নগদ)</h3>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${
-                        form.nagad.enabled
-                          ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
-                          : "bg-slate-800 text-slate-400 border border-slate-700"
-                      }`}
-                    >
-                      {form.nagad.enabled ? "Active" : "Disabled"}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Bangladesh Post Office Digital Financial Service
-                  </p>
-                </div>
-              </div>
-
-              {/* ON/OFF Switch */}
-              <button
-                type="button"
-                onClick={() => handleToggle("nagad")}
-                className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  form.nagad.enabled ? "bg-[#F97316]" : "bg-slate-700"
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
-                    form.nagad.enabled ? "translate-x-5" : "translate-x-0"
-                  }`}
-                />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-300">
-                  Nagad Account Number *
-                </label>
-                <div className="relative mt-1.5">
-                  <input
-                    type="text"
-                    required
-                    value={form.nagad.number}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        nagad: { ...prev.nagad, number: e.target.value },
-                      }))
-                    }
-                    className="w-full rounded-xl border border-slate-800 bg-slate-900/90 p-3 font-mono text-sm font-bold text-white outline-none focus:border-[#F97316]"
-                    placeholder="019XXXXXXXX"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => copyToClipboard(form.nagad.number, "nagad")}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg bg-slate-800 px-2 py-1 text-[10px] font-bold text-slate-300 hover:text-white"
-                  >
-                    {copiedKey === "nagad" ? (
-                      <span className="flex items-center gap-1 text-emerald-400">
-                        <Check size={11} /> Copied
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1">
-                        <Copy size={11} /> Copy
-                      </span>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-300">Account Type</label>
-                <select
-                  value={form.nagad.type}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      nagad: {
-                        ...prev.nagad,
-                        type: e.target.value as "personal" | "merchant" | "agent",
-                      },
-                    }))
-                  }
-                  className="mt-1.5 w-full rounded-xl border border-slate-800 bg-slate-900/90 p-3 text-sm font-bold text-white outline-none focus:border-[#F97316]"
-                >
-                  <option value="personal">Personal (Send Money)</option>
-                  <option value="merchant">Merchant (Payment)</option>
-                  <option value="agent">Agent (Cash In)</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-300">
-                Instruction Note for Students
-              </label>
-              <input
-                type="text"
-                value={form.nagad.instructions || ""}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    nagad: { ...prev.nagad, instructions: e.target.value },
-                  }))
-                }
-                placeholder="Send Money করুন এবং ট্রানজেকশন আইডি (TrxID) দিন"
-                className="mt-1.5 w-full rounded-xl border border-slate-800 bg-slate-900/90 p-2.5 text-xs text-white outline-none focus:border-[#F97316]"
-              />
-            </div>
-          </div>
-
-          {/* Rocket Gateway Card */}
-          <div
-            className={`rounded-3xl border transition-all p-6 space-y-5 ${
-              form.rocket.enabled
-                ? "border-[#8C3494]/30 bg-[#8C3494]/5"
-                : "border-slate-800 bg-[#070e1b] opacity-75"
-            }`}
-          >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800/80">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-28 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-center p-2 shrink-0">
-                  <RocketLogo size={24} />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-black text-white">Rocket (রকেট)</h3>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${
-                        form.rocket.enabled
-                          ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
-                          : "bg-slate-800 text-slate-400 border border-slate-700"
-                      }`}
-                    >
-                      {form.rocket.enabled ? "Active" : "Disabled"}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Dutch-Bangla Bank Mobile Banking
-                  </p>
-                </div>
-              </div>
-
-              {/* ON/OFF Switch */}
-              <button
-                type="button"
-                onClick={() => handleToggle("rocket")}
-                className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  form.rocket.enabled ? "bg-[#8C3494]" : "bg-slate-700"
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
-                    form.rocket.enabled ? "translate-x-5" : "translate-x-0"
-                  }`}
-                />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-300">
-                  Rocket Account Number *
-                </label>
-                <div className="relative mt-1.5">
-                  <input
-                    type="text"
-                    required
-                    value={form.rocket.number}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        rocket: { ...prev.rocket, number: e.target.value },
-                      }))
-                    }
-                    className="w-full rounded-xl border border-slate-800 bg-slate-900/90 p-3 font-mono text-sm font-bold text-white outline-none focus:border-[#8C3494]"
-                    placeholder="019XXXXXXXXX"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => copyToClipboard(form.rocket.number, "rocket")}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg bg-slate-800 px-2 py-1 text-[10px] font-bold text-slate-300 hover:text-white"
-                  >
-                    {copiedKey === "rocket" ? (
-                      <span className="flex items-center gap-1 text-emerald-400">
-                        <Check size={11} /> Copied
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1">
-                        <Copy size={11} /> Copy
-                      </span>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-300">Account Type</label>
-                <select
-                  value={form.rocket.type}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      rocket: {
-                        ...prev.rocket,
-                        type: e.target.value as "personal" | "merchant" | "agent",
-                      },
-                    }))
-                  }
-                  className="mt-1.5 w-full rounded-xl border border-slate-800 bg-slate-900/90 p-3 text-sm font-bold text-white outline-none focus:border-[#8C3494]"
-                >
-                  <option value="personal">Personal (Send Money)</option>
-                  <option value="merchant">Merchant (Payment)</option>
-                  <option value="agent">Agent (Cash In)</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-300">
-                Instruction Note for Students
-              </label>
-              <input
-                type="text"
-                value={form.rocket.instructions || ""}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    rocket: { ...prev.rocket, instructions: e.target.value },
-                  }))
-                }
-                placeholder="Send Money করুন এবং ট্রানজেকশন আইডি (TrxID) দিন"
-                className="mt-1.5 w-full rounded-xl border border-slate-800 bg-slate-900/90 p-2.5 text-xs text-white outline-none focus:border-[#8C3494]"
               />
             </div>
           </div>
@@ -756,7 +504,7 @@ export const PlatformSettings: React.FC<PlatformSettingsProps> = ({
             </div>
 
             {/* Gateway Selector Preview */}
-            <div className="grid grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-1 gap-2.5">
               {/* bKash preview card */}
               {form.bkash.enabled ? (
                 <button
@@ -785,62 +533,7 @@ export const PlatformSettings: React.FC<PlatformSettingsProps> = ({
                 </div>
               )}
 
-              {/* Nagad preview card */}
-              {form.nagad.enabled ? (
-                <button
-                  type="button"
-                  onClick={() => setSelectedPreviewMethod("nagad")}
-                  className={`flex flex-col items-center justify-center p-2.5 rounded-2xl border transition ${
-                    selectedPreviewMethod === "nagad"
-                      ? "border-[#F97316] bg-[#F97316]/15 text-white ring-1 ring-[#F97316]"
-                      : "border-slate-800 bg-slate-900/60 text-slate-300 hover:border-slate-700"
-                  }`}
-                >
-                  <div className="h-8 w-full px-1 rounded-lg bg-white flex items-center justify-center shadow-xs border border-slate-200">
-                    <NagadLogo size={18} />
-                  </div>
-                  <span className="text-xs font-black mt-1.5">Nagad</span>
-                  <span className="text-[9px] text-[#F97316] font-bold uppercase mt-0.5">
-                    {form.nagad.type}
-                  </span>
-                </button>
-              ) : (
-                <div className="flex flex-col items-center justify-center p-2.5 rounded-2xl border border-dashed border-slate-800/60 bg-slate-950/40 text-slate-600 opacity-50">
-                  <div className="h-8 w-full px-1 rounded-lg bg-white/30 flex items-center justify-center border border-slate-700/40">
-                    <NagadLogo size={18} className="grayscale opacity-40" />
-                  </div>
-                  <span className="text-[10px] font-bold mt-1.5">Disabled</span>
-                </div>
-              )}
-
-              {/* Rocket preview card */}
-              {form.rocket.enabled ? (
-                <button
-                  type="button"
-                  onClick={() => setSelectedPreviewMethod("rocket")}
-                  className={`flex flex-col items-center justify-center p-2.5 rounded-2xl border transition ${
-                    selectedPreviewMethod === "rocket"
-                      ? "border-[#8C3494] bg-[#8C3494]/15 text-white ring-1 ring-[#8C3494]"
-                      : "border-slate-800 bg-slate-900/60 text-slate-300 hover:border-slate-700"
-                  }`}
-                >
-                  <div className="h-8 w-full px-1 rounded-lg bg-white flex items-center justify-center shadow-xs border border-slate-200">
-                    <RocketLogo size={18} />
-                  </div>
-                  <span className="text-xs font-black mt-1.5">Rocket</span>
-                  <span className="text-[9px] text-[#C084FC] font-bold uppercase mt-0.5">
-                    {form.rocket.type}
-                  </span>
-                </button>
-              ) : (
-                <div className="flex flex-col items-center justify-center p-2.5 rounded-2xl border border-dashed border-slate-800/60 bg-slate-950/40 text-slate-600 opacity-50">
-                  <div className="h-8 w-full px-1 rounded-lg bg-white/30 flex items-center justify-center border border-slate-700/40">
-                    <RocketLogo size={18} className="grayscale opacity-40" />
-                  </div>
-                  <span className="text-[10px] font-bold mt-1.5">Disabled</span>
-                </div>
-              )}
-            </div>
+              </div>
 
             {/* Selected Method Details Box Preview */}
             {activeCount > 0 ? (
