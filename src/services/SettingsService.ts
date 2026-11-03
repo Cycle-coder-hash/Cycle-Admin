@@ -18,6 +18,28 @@ export interface PaymentSettingsConfig {
   announcementActive?: boolean;
   studentTelegramUrl?: string;
   studentTelegramDescription?: string;
+  pricing?: {
+    courses: {
+      basicToAdvance: { priceUsd: string; priceBdt?: string };
+      proBlueprint: { priceUsd: string; priceBdt?: string };
+    };
+    subscriptions: {
+      freeTrial: { priceUsd: string; isLockedFree?: boolean };
+      pro: { priceUsd: string; annualMonthlyEquivalentUsd?: string; yearlyTotalUsd?: string };
+      premium: { priceUsd: string; annualMonthlyEquivalentUsd?: string; yearlyTotalUsd?: string };
+    };
+  };
+  exchangeRate?: {
+    effectiveRate: number | null;
+    source: "manual" | "automatic" | "unavailable";
+    isBkashAvailable: boolean;
+    autoRate: number | null;
+    lastAutoUpdatedAt: string | null;
+    providerStatus: "healthy" | "degraded" | "unavailable";
+    manualOverrideEnabled: boolean;
+    manualRate: number | null;
+    rateAgeHuman?: string | null;
+  };
 }
 
 export const defaultPaymentConfig: PaymentSettingsConfig = {
@@ -43,6 +65,28 @@ export const defaultPaymentConfig: PaymentSettingsConfig = {
   announcementActive: true,
   studentTelegramUrl: "https://t.me/cycleofchart",
   studentTelegramDescription: "Official Cycle of Chart VIP Student Telegram Channel & Group",
+  pricing: {
+    courses: {
+      basicToAdvance: { priceUsd: "19.99" },
+      proBlueprint: { priceUsd: "39.99" },
+    },
+    subscriptions: {
+      freeTrial: { priceUsd: "0", isLockedFree: true },
+      pro: { priceUsd: "5.99", annualMonthlyEquivalentUsd: "4.99", yearlyTotalUsd: "59.88" },
+      premium: { priceUsd: "14.99", annualMonthlyEquivalentUsd: "11.99", yearlyTotalUsd: "143.88" },
+    },
+  },
+  exchangeRate: {
+    effectiveRate: 122.0,
+    source: "automatic",
+    isBkashAvailable: true,
+    autoRate: 122.0,
+    lastAutoUpdatedAt: null,
+    providerStatus: "healthy",
+    manualOverrideEnabled: false,
+    manualRate: null,
+    rateAgeHuman: "just now",
+  },
 };
 
 export const defaultCourseTelegramConfig: CourseTelegramConfig = {
@@ -120,6 +164,8 @@ export class SettingsService extends HttpClient implements ISettingsService {
         announcementActive?: boolean;
         studentTelegramUrl?: string;
         studentTelegramDescription?: string;
+        pricing?: any;
+        exchangeRate?: any;
       }>("/payment-settings");
       if (data?.success && data.gateways) {
         return {
@@ -131,6 +177,8 @@ export class SettingsService extends HttpClient implements ISettingsService {
           studentTelegramUrl: data.studentTelegramUrl || defaultPaymentConfig.studentTelegramUrl,
           studentTelegramDescription:
             data.studentTelegramDescription || defaultPaymentConfig.studentTelegramDescription,
+          pricing: data.pricing || defaultPaymentConfig.pricing,
+          exchangeRate: data.exchangeRate || defaultPaymentConfig.exchangeRate,
         };
       }
     } catch (err) {

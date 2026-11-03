@@ -38,6 +38,8 @@ export const PlatformSettings: React.FC<PlatformSettingsProps> = ({
     announcementActive: config?.announcementActive !== false,
     studentTelegramUrl: config?.studentTelegramUrl ?? defaultPaymentConfig.studentTelegramUrl,
     studentTelegramDescription: config?.studentTelegramDescription ?? defaultPaymentConfig.studentTelegramDescription,
+    pricing: config?.pricing ?? defaultPaymentConfig.pricing,
+    exchangeRate: config?.exchangeRate ?? defaultPaymentConfig.exchangeRate,
   });
 
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -54,6 +56,8 @@ export const PlatformSettings: React.FC<PlatformSettingsProps> = ({
         announcementActive: config.announcementActive !== false,
         studentTelegramUrl: config.studentTelegramUrl ?? defaultPaymentConfig.studentTelegramUrl,
         studentTelegramDescription: config.studentTelegramDescription ?? defaultPaymentConfig.studentTelegramDescription,
+        pricing: config.pricing ?? defaultPaymentConfig.pricing,
+        exchangeRate: config.exchangeRate ?? defaultPaymentConfig.exchangeRate,
       });
     }
   }, [config]);
@@ -178,6 +182,262 @@ export const PlatformSettings: React.FC<PlatformSettingsProps> = ({
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
         {/* Left: Gateway Cards & Settings */}
         <form onSubmit={handleSubmit} className="xl:col-span-7 space-y-6">
+          {/* Price Settings Card */}
+          <div className="rounded-3xl border border-sky-500/30 bg-[#070e1b] p-6 space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div>
+                <h3 className="text-base font-black text-white">Price Settings (USD & bKash BDT)</h3>
+                <p className="text-xs text-slate-400">
+                  Manage Subscription Plans, Basic to Advance, Cycle Blueprint, and USD/BDT Exchange Rate (0% bKash fee).
+                </p>
+              </div>
+              <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-black text-emerald-400 border border-emerald-500/30">
+                0% bKash Fee
+              </span>
+            </div>
+
+            {/* Group 1: Subscription Plans */}
+            <div className="space-y-3">
+              <div className="text-xs font-extrabold uppercase tracking-wider text-sky-400">
+                1. Subscription Plan Pricing (USD)
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400">Free Plan (Locked)</label>
+                  <input
+                    type="text"
+                    readOnly
+                    disabled
+                    value="$0.00"
+                    className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900/50 p-2.5 font-mono text-xs font-bold text-slate-500 cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300">Pro Monthly ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={form.pricing?.subscriptions?.pro?.priceUsd ?? "5.99"}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        pricing: {
+                          ...(prev.pricing || defaultPaymentConfig.pricing!),
+                          subscriptions: {
+                            ...(prev.pricing?.subscriptions || defaultPaymentConfig.pricing!.subscriptions),
+                            pro: {
+                              ...(prev.pricing?.subscriptions?.pro || defaultPaymentConfig.pricing!.subscriptions.pro),
+                              priceUsd: e.target.value,
+                            },
+                          },
+                        },
+                      }))
+                    }
+                    className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 p-2.5 font-mono text-xs font-bold text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300">Pro Annual /Mo ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={form.pricing?.subscriptions?.pro?.annualMonthlyEquivalentUsd ?? "4.99"}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const total = Number.isFinite(Number(val)) && Number(val) > 0 ? (Number(val) * 12).toFixed(2) : "59.88";
+                      setForm((prev) => ({
+                        ...prev,
+                        pricing: {
+                          ...(prev.pricing || defaultPaymentConfig.pricing!),
+                          subscriptions: {
+                            ...(prev.pricing?.subscriptions || defaultPaymentConfig.pricing!.subscriptions),
+                            pro: {
+                              ...(prev.pricing?.subscriptions?.pro || defaultPaymentConfig.pricing!.subscriptions.pro),
+                              annualMonthlyEquivalentUsd: val,
+                              yearlyTotalUsd: total,
+                            },
+                          },
+                        },
+                      }));
+                    }}
+                    className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 p-2.5 font-mono text-xs font-bold text-white"
+                  />
+                  <div className="mt-1 text-[10px] text-sky-400 font-mono">
+                    Total: ${form.pricing?.subscriptions?.pro?.yearlyTotalUsd ?? "59.88"}/yr
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300">Premium Monthly ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={form.pricing?.subscriptions?.premium?.priceUsd ?? "14.99"}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        pricing: {
+                          ...(prev.pricing || defaultPaymentConfig.pricing!),
+                          subscriptions: {
+                            ...(prev.pricing?.subscriptions || defaultPaymentConfig.pricing!.subscriptions),
+                            premium: {
+                              ...(prev.pricing?.subscriptions?.premium || defaultPaymentConfig.pricing!.subscriptions.premium),
+                              priceUsd: e.target.value,
+                            },
+                          },
+                        },
+                      }))
+                    }
+                    className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 p-2.5 font-mono text-xs font-bold text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300">Premium Annual /Mo ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={form.pricing?.subscriptions?.premium?.annualMonthlyEquivalentUsd ?? "11.99"}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const total = Number.isFinite(Number(val)) && Number(val) > 0 ? (Number(val) * 12).toFixed(2) : "143.88";
+                      setForm((prev) => ({
+                        ...prev,
+                        pricing: {
+                          ...(prev.pricing || defaultPaymentConfig.pricing!),
+                          subscriptions: {
+                            ...(prev.pricing?.subscriptions || defaultPaymentConfig.pricing!.subscriptions),
+                            premium: {
+                              ...(prev.pricing?.subscriptions?.premium || defaultPaymentConfig.pricing!.subscriptions.premium),
+                              annualMonthlyEquivalentUsd: val,
+                              yearlyTotalUsd: total,
+                            },
+                          },
+                        },
+                      }));
+                    }}
+                    className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 p-2.5 font-mono text-xs font-bold text-white"
+                  />
+                  <div className="mt-1 text-[10px] text-emerald-400 font-mono">
+                    Total: ${form.pricing?.subscriptions?.premium?.yearlyTotalUsd ?? "143.88"}/yr
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Group 2: Courses */}
+            <div className="space-y-3 pt-3 border-t border-slate-800">
+              <div className="text-xs font-extrabold uppercase tracking-wider text-amber-400">
+                2. Course Pricing (USD)
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300">Basic to Advance Course ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={form.pricing?.courses?.basicToAdvance?.priceUsd ?? "19.99"}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        pricing: {
+                          ...(prev.pricing || defaultPaymentConfig.pricing!),
+                          courses: {
+                            ...(prev.pricing?.courses || defaultPaymentConfig.pricing!.courses),
+                            basicToAdvance: { priceUsd: e.target.value },
+                          },
+                        },
+                      }))
+                    }
+                    className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 p-2.5 font-mono text-xs font-bold text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300">Cycle Blueprint Course ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={form.pricing?.courses?.proBlueprint?.priceUsd ?? "39.99"}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        pricing: {
+                          ...(prev.pricing || defaultPaymentConfig.pricing!),
+                          courses: {
+                            ...(prev.pricing?.courses || defaultPaymentConfig.pricing!.courses),
+                            proBlueprint: { priceUsd: e.target.value },
+                          },
+                        },
+                      }))
+                    }
+                    className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 p-2.5 font-mono text-xs font-bold text-white"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Group 3: Exchange Rate */}
+            <div className="space-y-3 pt-3 border-t border-slate-800">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-400">
+                  3. USD → BDT Exchange Rate (bKash)
+                </span>
+                <span className="text-[11px] font-mono text-slate-300">
+                  Auto Rate: {form.exchangeRate?.autoRate ?? 122} BDT ({form.exchangeRate?.providerStatus ?? "healthy"})
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                <div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900 p-3">
+                  <span className="text-xs font-bold text-slate-300">Manual Override</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        exchangeRate: {
+                          ...(prev.exchangeRate || defaultPaymentConfig.exchangeRate!),
+                          manualOverrideEnabled: !prev.exchangeRate?.manualOverrideEnabled,
+                        },
+                      }))
+                    }
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                      form.exchangeRate?.manualOverrideEnabled ? "bg-amber-500" : "bg-slate-700"
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${
+                        form.exchangeRate?.manualOverrideEnabled ? "translate-x-5" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300">Manual USD/BDT Rate (৳)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    placeholder="e.g. 125.00"
+                    value={form.exchangeRate?.manualRate ?? ""}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        exchangeRate: {
+                          ...(prev.exchangeRate || defaultPaymentConfig.exchangeRate!),
+                          manualRate: e.target.value ? Number(e.target.value) : null,
+                        },
+                      }))
+                    }
+                    className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 p-2.5 font-mono text-xs font-bold text-white"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
           {/* bKash Gateway Card */}
           <div
             className={`rounded-3xl border transition-all p-6 space-y-5 ${
