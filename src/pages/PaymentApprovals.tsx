@@ -173,7 +173,7 @@ export const PaymentApprovals: React.FC<PaymentApprovalsProps> = ({
                   <div className="flex items-center justify-between md:justify-end gap-4 border-t border-slate-800 pt-3 md:border-t-0 md:pt-0">
                     <div className="text-left md:text-right">
                       <div className="text-xl sm:text-2xl font-black text-white">
-                        {(o.currency === "USD" ? "$" : o.currency === "PKR" ? "Rs " : "৳") + o.amount} {o.currency || "BDT"}
+                        {o.currency === "USDT" ? `${o.amount} USDT` : ((o.currency === "USD" ? "$" : o.currency === "PKR" ? "Rs " : "৳") + o.amount + ` ${o.currency || "BDT"}`)}
                       </div>
                       {o.baseUsdAmount && o.currency !== "USD" && (
                         <div className="text-[11px] font-semibold text-slate-400">

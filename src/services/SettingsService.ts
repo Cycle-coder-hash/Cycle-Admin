@@ -10,7 +10,18 @@ export interface PaymentGatewayConfig {
   instructions?: string;
 }
 
+export interface BinanceGatewayConfig {
+  enabled: boolean;
+  identifierType: "binance_id" | "email" | "phone";
+  identifierValue: string;
+  qrImageUrl: string;
+  instructions: string;
+  currency: "USDT";
+  network?: string;
+}
+
 export interface PaymentSettingsConfig {
+  binancePay?: BinanceGatewayConfig;
   bkash: PaymentGatewayConfig;
   nagad: PaymentGatewayConfig;
   rocket: PaymentGatewayConfig;
@@ -54,6 +65,15 @@ export const defaultPaymentConfig: PaymentSettingsConfig = {
     number: "01961079326",
     type: "personal",
     instructions: "Send Money করুন এবং ট্রানজেকশন আইডি (TrxID) দিন",
+  },
+  binancePay: {
+    enabled: true,
+    identifierType: "binance_id",
+    identifierValue: "1077166735",
+    qrImageUrl: "https://images.unsplash.com/photo-1622979135225-d2ba269bc1df?w=600&auto=format&fit=crop&q=80",
+    instructions: "Scan the Binance QR or copy the Binance ID to transfer USDT (BEP20 / Internal). Submit the Transaction ID / Reference below.",
+    currency: "USDT",
+    network: "Binance Internal / BEP20",
   },
   rocket: {
     enabled: true,

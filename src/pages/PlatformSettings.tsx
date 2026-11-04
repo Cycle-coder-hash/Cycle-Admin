@@ -14,7 +14,7 @@ import {
   Send,
   ExternalLink,
 } from "lucide-react";
-import { BkashLogo } from "../components/PaymentIcons";
+import { BkashLogo, BinancePayLogo, BinanceSymbol } from "../components/PaymentIcons";
 import { PaymentSettingsConfig, defaultPaymentConfig } from "../lib/api";
 
 interface PlatformSettingsProps {
@@ -32,6 +32,7 @@ export const PlatformSettings: React.FC<PlatformSettingsProps> = ({
 }) => {
   const [form, setForm] = useState<PaymentSettingsConfig>({
     bkash: { ...defaultPaymentConfig.bkash, ...(config?.bkash || {}) },
+    binancePay: { ...defaultPaymentConfig.binancePay!, ...(config?.binancePay || {}) },
     nagad: { ...defaultPaymentConfig.nagad, ...(config?.nagad || {}) },
     rocket: { ...defaultPaymentConfig.rocket, ...(config?.rocket || {}) },
     announcement: config?.announcement ?? defaultPaymentConfig.announcement,
@@ -44,12 +45,13 @@ export const PlatformSettings: React.FC<PlatformSettingsProps> = ({
 
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [selectedPreviewMethod, setSelectedPreviewMethod] = useState<"bkash">("bkash");
+  const [selectedPreviewMethod, setSelectedPreviewMethod] = useState<"bkash" | "binancePay">("bkash");
 
   useEffect(() => {
     if (config) {
       setForm({
         bkash: { ...defaultPaymentConfig.bkash, ...(config.bkash || {}) },
+        binancePay: { ...defaultPaymentConfig.binancePay!, ...(config.binancePay || {}) },
         nagad: { ...defaultPaymentConfig.nagad, ...(config.nagad || {}) },
         rocket: { ...defaultPaymentConfig.rocket, ...(config.rocket || {}) },
         announcement: config.announcement ?? defaultPaymentConfig.announcement,
@@ -68,7 +70,17 @@ export const PlatformSettings: React.FC<PlatformSettingsProps> = ({
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  const handleToggle = (gateway: "bkash" | "nagad" | "rocket") => {
+  const handleToggle = (gateway: "bkash" | "binancePay" | "nagad" | "rocket") => {
+    if (gateway === "binancePay") {
+      setForm((prev) => ({
+        ...prev,
+        binancePay: {
+          ...(prev.binancePay || defaultPaymentConfig.binancePay!),
+          enabled: !(prev.binancePay?.enabled ?? true),
+        },
+      }));
+      return;
+    }
     setForm((prev) => ({
       ...prev,
       [gateway]: {
@@ -85,7 +97,7 @@ export const PlatformSettings: React.FC<PlatformSettingsProps> = ({
     setTimeout(() => setSaveSuccess(false), 3500);
   };
 
-  const activeCount = [form.bkash.enabled].filter(Boolean).length;
+  const activeCount = (form.bkash.enabled ? 1 : 0) + (form.binancePay?.enabled ? 1 : 0);
 
   return (
     <div className="space-y-8 animate-in fade-in">
@@ -149,7 +161,7 @@ export const PlatformSettings: React.FC<PlatformSettingsProps> = ({
             Active Gateways
           </div>
           <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-2xl font-black text-emerald-400">{activeCount} / 1</span>
+            <span className="text-2xl font-black text-emerald-400">{activeCount} / 2</span>
             <span className="text-xs text-slate-500">online</span>
           </div>
         </div>
@@ -159,8 +171,8 @@ export const PlatformSettings: React.FC<PlatformSettingsProps> = ({
             Disabled Gateways
           </div>
           <div className="mt-1 flex items-baseline gap-2">
-            <span className={`text-2xl font-black ${1 - activeCount > 0 ? "text-amber-400" : "text-slate-400"}`}>
-              {1 - activeCount} / 1
+            <span className={`text-2xl font-black ${2 - activeCount > 0 ? "text-amber-400" : "text-slate-400"}`}>
+              {2 - activeCount} / 2
             </span>
             <span className="text-xs text-slate-500">hidden</span>
           </div>
@@ -560,6 +572,186 @@ export const PlatformSettings: React.FC<PlatformSettingsProps> = ({
                 }
                 placeholder="Send Money করুন এবং ট্রানজেকশন আইডি (TrxID) দিন"
                 className="mt-1.5 w-full rounded-xl border border-slate-800 bg-slate-900/90 p-2.5 text-xs text-white outline-none focus:border-[#E2136E]"
+              />
+            </div>
+          </div>
+
+          
+          {/* Binance Pay Gateway Card */}
+          <div
+            className={`rounded-3xl border transition-all p-6 space-y-5 ${
+              form.binancePay?.enabled
+                ? "border-[#F0B90B]/30 bg-[#F0B90B]/5"
+                : "border-slate-800 bg-[#070e1b] opacity-75"
+            }`}
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800/80">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-28 rounded-2xl bg-[#181a20] border border-[#F0B90B]/40 shadow-sm flex items-center justify-center p-2 shrink-0">
+                  <BinancePayLogo size={22} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-black text-white">Binance Pay (বাইনান্স পে)</h3>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${
+                        form.binancePay?.enabled
+                          ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                          : "bg-slate-800 text-slate-400 border border-slate-700"
+                      }`}
+                    >
+                      {form.binancePay?.enabled ? "Active" : "Disabled"}
+                    </span>
+                    <span className="rounded-full bg-[#F0B90B]/20 text-[#F0B90B] border border-[#F0B90B]/40 px-2 py-0.5 text-[10px] font-bold">
+                      1:1 USDT Peg
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Personal Binance Pay with QR scanning & manual Transaction ID verification
+                  </p>
+                </div>
+              </div>
+
+              {/* ON/OFF Switch */}
+              <button
+                type="button"
+                onClick={() => handleToggle("binancePay")}
+                className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  form.binancePay?.enabled ? "bg-[#F0B90B]" : "bg-slate-700"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-slate-950 shadow-lg ring-0 transition duration-200 ease-in-out ${
+                    form.binancePay?.enabled ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-300">
+                  Receiving Identifier Type *
+                </label>
+                <select
+                  value={form.binancePay?.identifierType || "binance_id"}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      binancePay: {
+                        ...(prev.binancePay || defaultPaymentConfig.binancePay!),
+                        identifierType: e.target.value as any,
+                      },
+                    }))
+                  }
+                  className="mt-1.5 w-full rounded-xl border border-slate-800 bg-slate-900/90 p-3 text-sm font-bold text-white outline-none focus:border-[#F0B90B]"
+                >
+                  <option value="binance_id">Binance ID / UID (Recommended)</option>
+                  <option value="email">Binance Registered Email</option>
+                  <option value="phone">Binance Registered Phone</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300">
+                  Binance Receiving ID / Value *
+                </label>
+                <div className="relative mt-1.5">
+                  <input
+                    type="text"
+                    required
+                    value={form.binancePay?.identifierValue || ""}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        binancePay: {
+                          ...(prev.binancePay || defaultPaymentConfig.binancePay!),
+                          identifierValue: e.target.value,
+                        },
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-800 bg-slate-900/90 p-3 font-mono text-sm font-bold text-white outline-none focus:border-[#F0B90B]"
+                    placeholder="1077166735"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(form.binancePay?.identifierValue || "", "binance")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg bg-slate-800 px-2 py-1 text-[10px] font-bold text-slate-300 hover:text-white"
+                  >
+                    {copiedKey === "binance" ? (
+                      <span className="flex items-center gap-1 text-emerald-400">
+                        <Check size={11} /> Copied
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1">
+                        <Copy size={11} /> Copy
+                      </span>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* QR Image URL */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-slate-300">
+                Binance Pay QR Code Image URL
+              </label>
+              <div className="flex items-center gap-4">
+                {form.binancePay?.qrImageUrl ? (
+                  <div className="relative size-20 rounded-xl overflow-hidden border border-slate-700 bg-white p-1 shrink-0">
+                    <img
+                      src={form.binancePay.qrImageUrl}
+                      alt="Binance Pay QR"
+                      className="size-full object-contain"
+                    />
+                  </div>
+                ) : (
+                  <div className="size-20 rounded-xl border border-dashed border-slate-700 bg-slate-900 flex items-center justify-center text-slate-500 text-[10px] text-center p-1 shrink-0">
+                    No QR Image
+                  </div>
+                )}
+                <div className="flex-1 space-y-1.5">
+                  <input
+                    type="text"
+                    value={form.binancePay?.qrImageUrl || ""}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        binancePay: {
+                          ...(prev.binancePay || defaultPaymentConfig.binancePay!),
+                          qrImageUrl: e.target.value,
+                        },
+                      }))
+                    }
+                    placeholder="https://.../binance_qr.png"
+                    className="w-full rounded-xl border border-slate-800 bg-slate-900/90 p-2.5 font-mono text-xs text-white outline-none focus:border-[#F0B90B]"
+                  />
+                  <p className="text-[11px] text-slate-500">
+                    Direct image URL for your Personal Binance Pay receiving QR code.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-300">
+                Instruction Note for Students
+              </label>
+              <input
+                type="text"
+                value={form.binancePay?.instructions || ""}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    binancePay: {
+                      ...(prev.binancePay || defaultPaymentConfig.binancePay!),
+                      instructions: e.target.value,
+                    },
+                  }))
+                }
+                placeholder="Scan the QR or copy Binance ID. Send exact USDT (BEP20 / Internal). Submit Transaction ID."
+                className="mt-1.5 w-full rounded-xl border border-slate-800 bg-slate-900/90 p-2.5 text-xs text-white outline-none focus:border-[#F0B90B]"
               />
             </div>
           </div>

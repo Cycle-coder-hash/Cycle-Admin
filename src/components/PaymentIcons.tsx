@@ -238,7 +238,7 @@ export const RocketLogo: React.FC<PaymentIconProps> = ({
  * Mirrors official merchant checkout gates (Daraz, Foodpanda, SSLCommerz).
  */
 export const PaymentMethodBadge: React.FC<{
-  method: "bkash" | "nagad" | "rocket";
+  method: "bkash" | "nagad" | "rocket" | "binancePay" | "binance";
   size?: "sm" | "md" | "lg";
   showLabel?: boolean;
   className?: string;
@@ -262,6 +262,18 @@ export const PaymentMethodBadge: React.FC<{
       border: "border-[#8C3494]/40",
       logo: RocketLogo,
     },
+    binancePay: {
+      name: "Binance Pay",
+      bangla: "বাইনান্স পে",
+      border: "border-[#F0B90B]/40",
+      logo: BinancePayLogo,
+    },
+    binance: {
+      name: "Binance Pay",
+      bangla: "বাইনান্স পে",
+      border: "border-[#F0B90B]/40",
+      logo: BinancePayLogo,
+    },
   };
 
   const item = configs[method];
@@ -279,5 +291,87 @@ export const PaymentMethodBadge: React.FC<{
     >
       <Logo size={heights[size]} />
     </div>
+  );
+};
+
+/**
+ * 100% Authentic Binance Emblem Symbol (Vector Diamond Tessellation)
+ */
+export const BinanceSymbol: React.FC<PaymentIconProps> = ({
+  size = 28,
+  className = "",
+  ...props
+}) => {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 124 124"
+      width={size}
+      height={size}
+      fill="none"
+      className={`inline-block shrink-0 ${className}`}
+      {...props}
+    >
+      <path
+        fill="#F0B90B"
+        d="M62 0L24.8 37.2l12.4 12.4L62 24.8l24.8 24.8 12.4-12.4L62 0zM12.4 49.6L0 62l12.4 12.4 12.4-12.4L12.4 49.6zm99.2 0l-12.4 12.4 12.4 12.4L124 62l-12.4-12.4zM62 49.6L49.6 62 62 74.4 74.4 62 62 49.6zm-24.8 24.8L12.4 86.8 62 124l49.6-37.2-12.4-12.4L62 99.2 37.2 74.4z"
+      />
+    </svg>
+  );
+};
+
+/**
+ * Official Binance Pay Horizontal Lockup Logo (Vector SVG)
+ */
+export const BinancePayLogo: React.FC<PaymentIconProps> = ({
+  size = 30,
+  className = "",
+  variant = "color",
+  ...props
+}) => {
+  const textColor = variant === "white" ? "#FFFFFF" : "#F0B90B";
+  const subColor = variant === "white" ? "#E2E8F0" : "#FCD535";
+
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 280 64"
+      height={size}
+      width={typeof size === "number" ? Math.round(size * 4.37) : undefined}
+      fill="none"
+      className={`inline-block shrink-0 ${className}`}
+      {...props}
+    >
+      <g transform="translate(0, 4) scale(0.45)">
+        <path
+          fill="#F0B90B"
+          d="M62 0L24.8 37.2l12.4 12.4L62 24.8l24.8 24.8 12.4-12.4L62 0zM12.4 49.6L0 62l12.4 12.4 12.4-12.4L12.4 49.6zm99.2 0l-12.4 12.4 12.4 12.4L124 62l-12.4-12.4zM62 49.6L49.6 62 62 74.4 74.4 62 62 49.6zm-24.8 24.8L12.4 86.8 62 124l49.6-37.2-12.4-12.4L62 99.2 37.2 74.4z"
+        />
+      </g>
+      <text
+        x="68"
+        y="35"
+        fill={textColor}
+        fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+        fontSize="22"
+        fontWeight="900"
+        letterSpacing="1.5"
+      >
+        BINANCE
+      </text>
+      <rect x="194" y="16" width="58" height="25" rx="6" fill="#F0B90B" fillOpacity="0.2" stroke="#F0B90B" strokeWidth="1.5" />
+      <text
+        x="223"
+        y="34"
+        fill={subColor}
+        textAnchor="middle"
+        fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+        fontSize="13"
+        fontWeight="900"
+        letterSpacing="2"
+      >
+        PAY
+      </text>
+    </svg>
   );
 };
