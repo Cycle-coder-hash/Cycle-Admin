@@ -956,7 +956,7 @@ export const PlatformSettings: React.FC<PlatformSettingsProps> = ({
             </div>
 
             {/* Gateway Selector Preview */}
-            <div className="grid grid-cols-1 gap-2.5">
+            <div className="grid grid-cols-2 gap-2.5">
               {/* bKash preview card */}
               {form.bkash.enabled ? (
                 <button
@@ -985,33 +985,102 @@ export const PlatformSettings: React.FC<PlatformSettingsProps> = ({
                 </div>
               )}
 
-              </div>
+              {/* Binance Pay preview card */}
+              {form.binancePay?.enabled ? (
+                <button
+                  type="button"
+                  onClick={() => setSelectedPreviewMethod("binancePay")}
+                  className={`flex flex-col items-center justify-center p-2.5 rounded-2xl border transition ${
+                    selectedPreviewMethod === "binancePay"
+                      ? "border-[#F0B90B] bg-[#F0B90B]/15 text-white ring-1 ring-[#F0B90B]"
+                      : "border-slate-800 bg-slate-900/60 text-slate-300 hover:border-slate-700"
+                  }`}
+                >
+                  <div className="h-8 w-full px-1 rounded-lg bg-[#181a20] flex items-center justify-center shadow-xs border border-[#F0B90B]/40">
+                    <BinancePayLogo size={16} />
+                  </div>
+                  <span className="text-xs font-black mt-1.5">Binance Pay</span>
+                  <span className="text-[9px] text-[#F0B90B] font-bold uppercase mt-0.5">
+                    USDT (Crypto)
+                  </span>
+                </button>
+              ) : (
+                <div className="flex flex-col items-center justify-center p-2.5 rounded-2xl border border-dashed border-slate-800/60 bg-slate-950/40 text-slate-600 opacity-50">
+                  <div className="h-8 w-full px-1 rounded-lg bg-white/10 flex items-center justify-center border border-slate-700/40">
+                    <BinancePayLogo size={16} className="grayscale opacity-40" />
+                  </div>
+                  <span className="text-[10px] font-bold mt-1.5">Disabled</span>
+                </div>
+              )}
+            </div>
 
             {/* Selected Method Details Box Preview */}
             {activeCount > 0 ? (
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-400">
-                    Send Money to this {selectedPreviewMethod.toUpperCase()} number:
-                  </span>
-                  <span className="text-[10px] font-black uppercase text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                    Active
-                  </span>
-                </div>
+              selectedPreviewMethod === "binancePay" ? (
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-400">
+                      Send USDT via Binance Pay (
+                      {form.binancePay?.identifierType === "binance_id"
+                        ? "Binance ID"
+                        : form.binancePay?.identifierType === "email"
+                        ? "Email"
+                        : "Phone"}
+                      ):
+                    </span>
+                    <span className="text-[10px] font-black uppercase text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                      Active
+                    </span>
+                  </div>
 
-                <div className="flex items-center justify-between rounded-xl bg-slate-950 p-3 border border-slate-800">
-                  <span className="font-mono text-base font-black text-white tracking-wider">
-                    {form[selectedPreviewMethod].number || "Not configured"}
-                  </span>
-                  <span className="text-[11px] font-bold text-sky-400">Copy</span>
-                </div>
+                  <div className="flex items-center justify-between rounded-xl bg-slate-950 p-3 border border-slate-800">
+                    <span className="font-mono text-base font-black text-white tracking-wider truncate mr-2">
+                      {form.binancePay?.identifierValue || "Not configured"}
+                    </span>
+                    <span className="text-[11px] font-bold text-sky-400 shrink-0">Copy</span>
+                  </div>
 
-                {form[selectedPreviewMethod].instructions && (
-                  <p className="text-[11px] text-slate-400 italic">
-                    Note: {form[selectedPreviewMethod].instructions}
-                  </p>
-                )}
-              </div>
+                  {form.binancePay?.qrImageUrl && (
+                    <div className="flex justify-center p-2 bg-white rounded-xl w-fit mx-auto">
+                      <img
+                        src={form.binancePay.qrImageUrl}
+                        alt="Binance QR"
+                        className="size-24 object-contain"
+                      />
+                    </div>
+                  )}
+
+                  {form.binancePay?.instructions && (
+                    <p className="text-[11px] text-slate-400 italic">
+                      Note: {form.binancePay.instructions}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-400">
+                      Send Money to this BKASH number:
+                    </span>
+                    <span className="text-[10px] font-black uppercase text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                      Active
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between rounded-xl bg-slate-950 p-3 border border-slate-800">
+                    <span className="font-mono text-base font-black text-white tracking-wider">
+                      {form.bkash.number || "Not configured"}
+                    </span>
+                    <span className="text-[11px] font-bold text-sky-400">Copy</span>
+                  </div>
+
+                  {form.bkash.instructions && (
+                    <p className="text-[11px] text-slate-400 italic">
+                      Note: {form.bkash.instructions}
+                    </p>
+                  )}
+                </div>
+              )
             ) : (
               <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-center space-y-1">
                 <AlertCircle className="size-6 text-rose-400 mx-auto" />
