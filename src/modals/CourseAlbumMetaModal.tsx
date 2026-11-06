@@ -48,8 +48,8 @@ export const CourseAlbumMetaModal: React.FC<CourseAlbumMetaModalProps> = ({
       setSubtitle(meta.subtitle || "");
       setSubtitleBn(meta.subtitleBn || "");
       setDescription(meta.description || "");
-      setPriceBdt(meta.priceBdt || (courseId === "basic-to-advance" ? "2499" : "4999"));
-      setPriceUsd(meta.priceUsd || (courseId === "basic-to-advance" ? "19.99" : "39.99"));
+      setPriceBdt(meta.priceBdt || (courseId === "basic-to-advance" ? "6099" : "4999"));
+      setPriceUsd(meta.priceUsd || (courseId === "basic-to-advance" ? "49.99" : "39.99"));
       setThumbnailUrl(meta.thumbnailUrl || "");
       setBadgeText(meta.badgeText || "");
       setIsPublished(meta.isPublished !== false);
@@ -113,7 +113,7 @@ export const CourseAlbumMetaModal: React.FC<CourseAlbumMetaModalProps> = ({
               </h3>
               <p className="text-xs text-sky-400 font-bold">
                 {courseId === "basic-to-advance"
-                  ? "Basic to Advance (Album A)"
+                  ? "Trading Zero to Alpha ($49.99 USD)"
                   : "Cycle Blueprint (Album B)"}
               </p>
             </div>

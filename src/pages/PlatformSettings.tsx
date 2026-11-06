@@ -200,7 +200,7 @@ export const PlatformSettings: React.FC<PlatformSettingsProps> = ({
               <div>
                 <h3 className="text-base font-black text-white">Price Settings (USD & bKash BDT)</h3>
                 <p className="text-xs text-slate-400">
-                  Manage Subscription Plans, Basic to Advance, Cycle Blueprint, and USD/BDT Exchange Rate (0% bKash fee).
+                  Manage Subscription Plans, Trading Zero to Alpha, Cycle Blueprint, and USD/BDT Exchange Rate (0% bKash fee).
                 </p>
               </div>
               <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-black text-emerald-400 border border-emerald-500/30">
@@ -346,12 +346,12 @@ export const PlatformSettings: React.FC<PlatformSettingsProps> = ({
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-300">Basic to Advance Course ($)</label>
+                  <label className="block text-[11px] font-bold text-slate-300">Trading Zero to Alpha Course ($)</label>
                   <input
                     type="number"
                     step="0.01"
                     min="0.01"
-                    value={form.pricing?.courses?.basicToAdvance?.priceUsd ?? "19.99"}
+                    value={form.pricing?.courses?.basicToAdvance?.priceUsd ?? "49.99"}
                     onChange={(e) =>
                       setForm((prev) => ({
                         ...prev,

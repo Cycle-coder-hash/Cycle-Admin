@@ -35,7 +35,7 @@ const tabTitles: Record<string, string> = {
   mentor: "Official 1-on-1 Mentor Control",
   "ai-report": "Cycle AI Engine & OpenRouter CMS",
   psychology: "Psychology Feed & Mindset CMS",
-  library: "Library & Course Management CMS",
+  library: "Cycle University — Course & Resource Management",
   community: "Community Feed & Discourse Moderation",
   support: "Support Messages",
   ebooks: "Free eBooks & PDF Library CMS",

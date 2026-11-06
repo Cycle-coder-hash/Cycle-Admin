@@ -36,15 +36,15 @@ export class CourseService extends HttpClient implements ICourseService {
       courseId === "basic-to-advance"
         ? {
             id: "basic-to-advance",
-            title: "Cycle of Chart Basic to Advance Course",
+            title: "Trading Zero to Alpha",
             titleBn: "সাইকেল অফ চার্ট বেসিক টু অ্যাডভান্স কোর্স",
             subtitle: "Complete Institutional Trading Curriculum from zero to master",
             subtitleBn: "শূন্য থেকে মাস্টার লেভেল পর্যন্ত সম্পূর্ণ প্রাতিষ্ঠানিক ট্রেডিং কোর্স",
             description:
               "A complete professional video curriculum covering Market Structure, Candlestick Anatomy, Candle Range Theory (CRT), Institutional Order Flow, Liquidity Sweeps, and Risk Execution.",
             bundleId: 2,
-            priceBdt: "2499",
-            priceUsd: "19.99",
+            priceBdt: "6099",
+            priceUsd: "49.99",
             badgeText: "Most Popular",
             features: [
               "Full Candle Range Theory (CRT) Anatomy",

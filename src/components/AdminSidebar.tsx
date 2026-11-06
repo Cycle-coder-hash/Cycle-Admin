@@ -57,7 +57,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     { id: "ai-report", label: "Cycle AI Engine", icon: Cpu },
     { id: "psychology", label: "Psychology Feed", icon: Brain },
     { id: "community", label: "Community Feed", icon: MessagesSquare },
-    { id: "library", label: "Library Management", icon: BookOpen },
+    { id: "library", label: "Cycle University", icon: BookOpen },
     {
       id: "support",
       label: "Support Messages",

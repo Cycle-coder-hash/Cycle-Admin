@@ -285,10 +285,10 @@ export const LibraryManagement: React.FC<LibraryManagementProps> = ({
             </span>
           </div>
           <h2 className="text-2xl font-black tracking-tight text-white mt-1">
-            Library Management
+            Cycle University
           </h2>
           <p className="mt-1 text-xs text-slate-400 max-w-3xl">
-            Manage your entire learning library: publish free strategy PDFs with Google Drive integration, or manage your paid video course albums with unlimited YouTube unlisted classes.
+            Cycle University — Course & Resource Management: publish free strategy PDFs with Google Drive integration, or manage your paid video course albums with unlimited YouTube unlisted classes.
           </p>
         </div>
 
@@ -344,7 +344,7 @@ export const LibraryManagement: React.FC<LibraryManagementProps> = ({
           }`}
         >
           <Video size={16} />
-          <span>2. Basic to Advance — ৳2,499 BDT</span>
+          <span>2. Trading Zero to Alpha ($49.99)</span>
           <span
             className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
               activeCategory === "basic-to-advance"
@@ -365,7 +365,7 @@ export const LibraryManagement: React.FC<LibraryManagementProps> = ({
           }`}
         >
           <Sparkles size={16} />
-          <span>3. Cycle Blueprint — ৳4,999 BDT</span>
+          <span>3. ORDER FLOW PRO ($99 USD)</span>
           <span
             className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
               activeCategory === "cycle-blueprint"
@@ -627,7 +627,7 @@ export const LibraryManagement: React.FC<LibraryManagementProps> = ({
               </div>
 
               <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-                {currentMeta?.title || (currentCourseId === "basic-to-advance" ? "Basic to Advance Course" : "Cycle Blueprint")}
+                {currentMeta?.title || (currentCourseId === "basic-to-advance" ? "Trading Zero to Alpha" : "Cycle Blueprint")}
               </h2>
               {currentMeta?.titleBn && (
                 <div className="text-xs text-slate-400 font-semibold">{currentMeta.titleBn}</div>
@@ -882,7 +882,7 @@ export const LibraryManagement: React.FC<LibraryManagementProps> = ({
         courseId={selectedCourseId}
         courseTitle={
           selectedCourseId === "basic-to-advance"
-            ? "Basic to Advance Course (৳2,499)"
+            ? "Trading Zero to Alpha (৳2,499)"
             : "Cycle Blueprint (৳4,999)"
         }
         editingClass={editingClass}

@@ -126,7 +126,7 @@ export const PaymentApprovals: React.FC<PaymentApprovalsProps> = ({
                         {o.paymentMethod}
                       </span>
                       <span className="rounded-lg bg-sky-950/70 border border-sky-800/40 px-2 py-0.5 text-[11px] font-extrabold text-sky-300">
-                        {o.bundleId === 101 || (o.amount && Math.abs(parseFloat(o.amount) - 743) < 40) ? "Pro Subscription" : o.bundleId === 102 || (o.amount && parseFloat(o.amount) >= 1700 && parseFloat(o.amount) <= 2100) ? "Premium Subscription" : o.bundleId === 4 ? "Bundle 4 · Professional Blueprint" : o.bundleId === 2 ? "Bundle 2 · Course + eBook" : o.bundleId ? `Bundle #${o.bundleId}` : "Trading Package"}
+                        {o.bundleId === 101 || (o.amount && Math.abs(parseFloat(o.amount) - 743) < 40) ? "Pro Subscription" : o.bundleId === 102 || (o.amount && parseFloat(o.amount) >= 1700 && parseFloat(o.amount) <= 2100) ? "Premium Subscription" : o.bundleId === 4 ? "Bundle 4 · Professional Blueprint" : o.bundleId === 2 ? "Bundle 2 · Trading Zero to Alpha ($49.99)" : o.bundleId ? `Bundle #${o.bundleId}` : "Trading Package"}
                       </span>
                       {(o.billingCycle || o.bundleId === 101 || o.bundleId === 102) && (
                         <span className="rounded-lg bg-indigo-950/80 border border-indigo-700/50 px-2 py-0.5 text-[11px] font-extrabold uppercase text-indigo-300">

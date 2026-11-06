@@ -87,7 +87,7 @@ export const defaultPaymentConfig: PaymentSettingsConfig = {
   studentTelegramDescription: "Official Cycle of Chart VIP Student Telegram Channel & Group",
   pricing: {
     courses: {
-      basicToAdvance: { priceUsd: "19.99" },
+      basicToAdvance: { priceUsd: "49.99" },
       proBlueprint: { priceUsd: "39.99" },
     },
     subscriptions: {
