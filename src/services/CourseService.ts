@@ -176,10 +176,15 @@ export class CourseService extends HttpClient implements ICourseService {
 
     const existing = await this.fetchCourseClasses(courseId);
     const now = new Date().toISOString();
+    const maxOrder = existing.reduce((max, c) => Math.max(max, c.order || 0), 0);
+    const hasConflict = payload.order !== undefined && existing.some((c) => c.order === payload.order);
     const nextOrder =
-      payload.order !== undefined && payload.order > 0 ? payload.order : existing.length + 1;
+      payload.order !== undefined && payload.order > 0 && !hasConflict
+        ? payload.order
+        : maxOrder + 1;
+    const randomSuffix = Math.random().toString(36).substring(2, 9);
     const newClass: CourseClass = {
-      id: `class-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      id: `cls_${Date.now()}_${randomSuffix}`,
       courseId,
       title: payload.title.trim(),
       description: payload.description?.trim() || "",

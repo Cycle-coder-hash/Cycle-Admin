@@ -21,14 +21,16 @@ function normalizeApiUrl(url: string): string {
 
 function normalizeSupabaseRestUrl(url: string): string {
   let clean = (url || "").trim().replace(/^["']|["']$/g, "").replace(/\/+$/, "");
-  if (!clean) return (import.meta?.env?.VITE_SUPABASE_URL ? `${import.meta.env.VITE_SUPABASE_URL}/rest/v1` : "");
+  if (!clean && import.meta?.env?.VITE_SUPABASE_URL) {
+    clean = (import.meta.env.VITE_SUPABASE_URL || "").trim().replace(/^["']|["']$/g, "").replace(/\/+$/, "");
+  }
+  if (!clean) return "";
+  // Strip any existing /rest/v1 so we don't accidentally duplicate it
+  clean = clean.replace(/\/rest\/v1\/?$/i, "").replace(/\/+$/, "");
   if (!/^https?:\/\//i.test(clean)) {
     clean = `https://${clean}`;
   }
-  if (!clean.endsWith("/rest/v1")) {
-    clean = `${clean}/rest/v1`;
-  }
-  return clean;
+  return `${clean}/rest/v1`;
 }
 
 const rawApiUrl = normalizeApiUrl(

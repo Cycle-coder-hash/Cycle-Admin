@@ -25,6 +25,7 @@ interface CourseClassModalProps {
   courseId: CourseId;
   courseTitle: string;
   editingClass: CourseClass | null;
+  defaultOrder?: number;
   onSave: (formData: {
     courseId: CourseId;
     id?: string;
@@ -45,6 +46,7 @@ export const CourseClassModal: React.FC<CourseClassModalProps> = ({
   courseId,
   courseTitle,
   editingClass,
+  defaultOrder = 1,
   onSave,
   isSaving = false,
 }) => {
@@ -52,10 +54,13 @@ export const CourseClassModal: React.FC<CourseClassModalProps> = ({
   const [description, setDescription] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [duration, setDuration] = useState("45 min");
-  const [order, setOrder] = useState<number>(1);
+  const [order, setOrder] = useState<number>(defaultOrder || 1);
   const [isPublished, setIsPublished] = useState(true);
   const [resourceLink, setResourceLink] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isBusy = isSaving || isSubmitting;
 
   useEffect(() => {
     if (editingClass) {
@@ -71,12 +76,12 @@ export const CourseClassModal: React.FC<CourseClassModalProps> = ({
       setDescription("");
       setVideoUrl("");
       setDuration("45 min");
-      setOrder(1);
+      setOrder(defaultOrder || 1);
       setIsPublished(true);
       setResourceLink("");
     }
     setError(null);
-  }, [editingClass, isOpen]);
+  }, [editingClass, isOpen, defaultOrder]);
 
   if (!isOpen) return null;
 
@@ -103,7 +108,10 @@ export const CourseClassModal: React.FC<CourseClassModalProps> = ({
       return;
     }
 
+    if (isBusy) return;
+
     try {
+      setIsSubmitting(true);
       await onSave({
         courseId,
         id: editingClass?.id,
@@ -111,13 +119,16 @@ export const CourseClassModal: React.FC<CourseClassModalProps> = ({
         description: description.trim(),
         videoUrl: videoUrl.trim(),
         duration: duration.trim() || "45 min",
-        order: Number(order) || 1,
+        order: Number(order) || defaultOrder || 1,
         isPublished,
         resourceLink: resourceLink.trim(),
       });
       onClose();
     } catch (err: any) {
+      // In case of error: KEEP FORM OPEN and preserve all inputs so user can retry safely
       setError(err.message || "Failed to save class");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -144,6 +155,7 @@ export const CourseClassModal: React.FC<CourseClassModalProps> = ({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="rounded-full p-2 text-slate-400 hover:bg-slate-800 hover:text-white transition"
           >
@@ -346,18 +358,18 @@ export const CourseClassModal: React.FC<CourseClassModalProps> = ({
               type="button"
               variant="outline"
               onClick={onClose}
-              disabled={isSaving}
+              disabled={isBusy}
               className="border-slate-800 bg-slate-900 font-bold text-slate-300 hover:bg-slate-800 hover:text-white"
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={isSaving}
+              disabled={isBusy}
               className="gap-2 bg-sky-500 font-bold text-slate-950 hover:bg-sky-400 shadow-md"
             >
               <Save size={14} />
-              <span>{isSaving ? "Saving..." : editingClass ? "Save Changes" : "Create Class"}</span>
+              <span>{isBusy ? "Saving..." : editingClass ? "Save Changes" : "Create Class"}</span>
             </Button>
           </div>
         </form>

@@ -85,6 +85,7 @@ export const LibraryManagement: React.FC<LibraryManagementProps> = ({
   const [isAlbumMetaModalOpen, setIsAlbumMetaModalOpen] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState<CourseId>("basic-to-advance");
   const [previewingClass, setPreviewingClass] = useState<CourseClass | null>(null);
+  const [isSavingClass, setIsSavingClass] = useState(false);
 
   // Feedback Notification
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -94,10 +95,10 @@ export const LibraryManagement: React.FC<LibraryManagementProps> = ({
     setTimeout(() => setFeedback(null), 4000);
   };
 
-  // Load Course Data
-  const loadCourseData = async () => {
+  // Load Course Data with optional silent mode to prevent unmounting/blinking the class list
+  const loadCourseData = async (silent = false) => {
     try {
-      setLoadingCourses(true);
+      if (!silent) setLoadingCourses(true);
       const [metaA, metaB, clsA, clsB] = await Promise.all([
         fetchCourseAlbumMetaApi("basic-to-advance"),
         fetchCourseAlbumMetaApi("cycle-blueprint"),
@@ -111,7 +112,7 @@ export const LibraryManagement: React.FC<LibraryManagementProps> = ({
     } catch (err: any) {
       console.error("[loadCourseData error]:", err);
     } finally {
-      setLoadingCourses(false);
+      if (!silent) setLoadingCourses(false);
     }
   };
 
@@ -183,14 +184,42 @@ export const LibraryManagement: React.FC<LibraryManagementProps> = ({
     isPublished?: boolean;
     resourceLink?: string;
   }) => {
-    if (formData.id) {
-      await updateCourseClassApi(formData.courseId, formData.id, formData);
-      showNotification("success", "Video class updated successfully.");
-    } else {
-      await createCourseClassApi(formData.courseId, formData);
-      showNotification("success", "New video class added to album.");
+    setIsSavingClass(true);
+    try {
+      if (formData.id) {
+        const updated = await updateCourseClassApi(formData.courseId, formData.id, formData);
+        if (formData.courseId === "basic-to-advance") {
+          setClassesA((prev) => {
+            const list = prev.map((c) => (String(c.id) === String(updated.id) ? updated : c));
+            return list.sort((a, b) => (a.order || 0) - (b.order || 0));
+          });
+        } else {
+          setClassesB((prev) => {
+            const list = prev.map((c) => (String(c.id) === String(updated.id) ? updated : c));
+            return list.sort((a, b) => (a.order || 0) - (b.order || 0));
+          });
+        }
+        showNotification("success", "Video class updated successfully.");
+      } else {
+        const created = await createCourseClassApi(formData.courseId, formData);
+        if (formData.courseId === "basic-to-advance") {
+          setClassesA((prev) => {
+            const without = prev.filter((c) => String(c.id) !== String(created.id));
+            return [...without, created].sort((a, b) => (a.order || 0) - (b.order || 0));
+          });
+        } else {
+          setClassesB((prev) => {
+            const without = prev.filter((c) => String(c.id) !== String(created.id));
+            return [...without, created].sort((a, b) => (a.order || 0) - (b.order || 0));
+          });
+        }
+        showNotification("success", "New video class added to album.");
+      }
+      // Background silent re-verification: updates numbers/stats without ever unmounting table or blinking screen
+      void loadCourseData(true);
+    } finally {
+      setIsSavingClass(false);
     }
-    await loadCourseData();
   };
 
   const handleDeleteClass = async (courseId: CourseId, cls: CourseClass) => {
@@ -886,7 +915,9 @@ export const LibraryManagement: React.FC<LibraryManagementProps> = ({
             : "Cycle Blueprint (৳4,999)"
         }
         editingClass={editingClass}
+        defaultOrder={(selectedCourseId === "basic-to-advance" ? classesA : classesB).length + 1}
         onSave={handleSaveClass}
+        isSaving={isSavingClass}
       />
 
       {/* Album Meta Modal (Edit Details) */}
