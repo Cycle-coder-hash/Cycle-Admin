@@ -10,6 +10,38 @@
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=JetBrains+Mono:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
+    <script>
+      (function () {
+        try {
+          var blockContext = function (e) {
+            e.preventDefault();
+            return false;
+          };
+          var blockKeys = function (e) {
+            var k = (e.key || "").toUpperCase();
+            var c = e.keyCode || e.which;
+            var mod = e.ctrlKey || e.metaKey;
+            if (
+              k === "F12" ||
+              c === 123 ||
+              k === "CONTEXTMENU" ||
+              c === 93 ||
+              (e.shiftKey && (k === "F10" || c === 121)) ||
+              (mod && (e.shiftKey || e.altKey) && (k === "I" || c === 73 || k === "J" || c === 74 || k === "C" || c === 67 || k === "K" || c === 75 || k === "E" || c === 69 || k === "M" || c === 77 || k === "U" || c === 85)) ||
+              (mod && !e.shiftKey && !e.altKey && (k === "U" || c === 85 || k === "S" || c === 83))
+            ) {
+              e.preventDefault();
+              e.stopPropagation();
+              return false;
+            }
+          };
+          window.addEventListener("contextmenu", blockContext, true);
+          document.addEventListener("contextmenu", blockContext, true);
+          window.addEventListener("keydown", blockKeys, true);
+          document.addEventListener("keydown", blockKeys, true);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body class="bg-[#060d19] text-slate-100 font-['Plus_Jakarta_Sans',sans-serif] antialiased">
     <div id="root"></div>
