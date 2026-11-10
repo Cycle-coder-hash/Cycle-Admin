@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
-  BookOpen,
   Plus,
-  Search,
-  Paperclip,
   Eye,
   EyeOff,
   Edit,
@@ -15,11 +12,9 @@ import {
   Layers,
   Sparkles,
   ExternalLink,
-  Download,
   Settings,
   CheckCircle2,
   AlertCircle,
-  FileText,
   Clock,
   Link2,
   X,
@@ -33,7 +28,6 @@ import {
   updateCourseClassApi,
   deleteCourseClassApi,
   reorderCourseClassesApi,
-  reorderEbooksApi,
   CourseAlbumMeta,
   CourseClass,
   CourseId,
@@ -42,18 +36,16 @@ import {
   extractYouTubeVideoId,
   getYouTubeEmbedUrl,
   getYouTubeThumbnailUrl,
-  getGoogleDrivePreviewUrl,
-  getGoogleDriveDownloadUrl,
 } from "../lib/mediaLinks";
 import { CourseClassModal } from "../modals/CourseClassModal";
 import { CourseAlbumMetaModal } from "../modals/CourseAlbumMetaModal";
 
 interface LibraryManagementProps {
-  ebooks: any[];
-  onOpenAddEbookModal: () => void;
-  onOpenEditEbookModal: (ebook: any) => void;
-  onTogglePublishEbook: (id: number, currentPublished: boolean) => void;
-  onDeleteEbook: (id: number) => void;
+  ebooks?: any[];
+  onOpenAddEbookModal?: () => void;
+  onOpenEditEbookModal?: (ebook: any) => void;
+  onTogglePublishEbook?: (id: number, currentPublished: boolean) => void;
+  onDeleteEbook?: (id: number) => void;
   onReloadEbooks?: () => void;
 }
 
@@ -66,11 +58,9 @@ export const LibraryManagement: React.FC<LibraryManagementProps> = ({
   onReloadEbooks,
 }) => {
   // Category tab state: "free-pdfs" | "basic-to-advance" | "cycle-blueprint"
-  const [activeCategory, setActiveCategory] = useState<"free-pdfs" | "basic-to-advance" | "cycle-blueprint">("free-pdfs");
+  const [activeCategory, setActiveCategory] = useState<"basic-to-advance" | "cycle-blueprint">("basic-to-advance");
 
   // Free PDFs Search & Filter
-  const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
 
   // Course Album States
   const [courseMetaA, setCourseMetaA] = useState<CourseAlbumMeta | null>(null);
@@ -119,46 +109,6 @@ export const LibraryManagement: React.FC<LibraryManagementProps> = ({
   useEffect(() => {
     loadCourseData();
   }, []);
-
-  // Free PDFs Filter
-  const filteredEbooks = (ebooks || []).filter((eb: any) => {
-    if (categoryFilter !== "all" && eb.category !== categoryFilter) return false;
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      return (
-        eb.titleEn?.toLowerCase().includes(q) ||
-        eb.titleBn?.toLowerCase().includes(q) ||
-        eb.subtitleEn?.toLowerCase().includes(q) ||
-        eb.category?.toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
-
-  const categories = Array.from(
-    new Set((ebooks || []).map((e: any) => e.category).filter(Boolean))
-  );
-
-  // Reorder Free PDFs
-  const handleMoveEbook = async (id: number, direction: "up" | "down") => {
-    const list = [...(ebooks || [])];
-    const index = list.findIndex((e) => Number(e.id) === Number(id));
-    if (index === -1) return;
-    const targetIndex = direction === "up" ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= list.length) return;
-
-    const [moved] = list.splice(index, 1);
-    list.splice(targetIndex, 0, moved);
-
-    const orderedIds = list.map((e) => Number(e.id));
-    try {
-      await reorderEbooksApi(orderedIds);
-      showNotification("success", "PDF ordering sequence updated.");
-      onReloadEbooks?.();
-    } catch (err: any) {
-      showNotification("error", "Failed to update PDF sequence: " + err.message);
-    }
-  };
 
   // Class Actions
   const handleOpenAddClass = (courseId: CourseId) => {
@@ -317,53 +267,22 @@ export const LibraryManagement: React.FC<LibraryManagementProps> = ({
             Cycle University
           </h2>
           <p className="mt-1 text-xs text-slate-400 max-w-3xl">
-            Cycle University — Course & Resource Management: publish free strategy PDFs with Google Drive integration, or manage your paid video course albums with unlimited YouTube unlisted classes.
+            Cycle University — Course Management: manage your paid video course albums with unlimited YouTube unlisted classes.
           </p>
         </div>
 
-        {/* Global Action depending on active category */}
-        {activeCategory === "free-pdfs" ? (
-          <button
-            onClick={onOpenAddEbookModal}
-            className="flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2.5 text-xs font-bold text-slate-950 shadow-md hover:bg-sky-400 transition cursor-pointer self-start sm:self-auto shrink-0"
-          >
-            <Plus size={15} />
-            <span>Add Free PDF</span>
-          </button>
-        ) : (
-          <button
-            onClick={() => handleOpenAddClass(currentCourseId)}
-            className="flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2.5 text-xs font-bold text-slate-950 shadow-md hover:bg-sky-400 transition cursor-pointer self-start sm:self-auto shrink-0"
-          >
-            <Plus size={15} />
-            <span>Add Class to Album</span>
-          </button>
-        )}
+        {/* Global Action: Add Class to Album */}
+        <button
+          onClick={() => handleOpenAddClass(currentCourseId)}
+          className="flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2.5 text-xs font-bold text-slate-950 shadow-md hover:bg-sky-400 transition cursor-pointer self-start sm:self-auto shrink-0"
+        >
+          <Plus size={15} />
+          <span>Add Class to Album</span>
+        </button>
       </div>
 
-      {/* Three Manageable Category Tabs */}
+      {/* Manageable Course Category Tabs */}
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-4">
-        <button
-          onClick={() => setActiveCategory("free-pdfs")}
-          className={`flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-xs font-black transition cursor-pointer ${
-            activeCategory === "free-pdfs"
-              ? "bg-sky-500 text-slate-950 shadow-lg shadow-sky-500/20"
-              : "bg-slate-900/80 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800"
-          }`}
-        >
-          <BookOpen size={16} />
-          <span>1. Free PDFs</span>
-          <span
-            className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
-              activeCategory === "free-pdfs"
-                ? "bg-slate-950 text-sky-400"
-                : "bg-slate-800 text-slate-300"
-            }`}
-          >
-            {ebooks?.length || 0}
-          </span>
-        </button>
-
         <button
           onClick={() => setActiveCategory("basic-to-advance")}
           className={`flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-xs font-black transition cursor-pointer ${
@@ -373,7 +292,7 @@ export const LibraryManagement: React.FC<LibraryManagementProps> = ({
           }`}
         >
           <Video size={16} />
-          <span>2. Trading Zero to Alpha ($49.99)</span>
+          <span>1. Trading Zero to Alpha ($49.99)</span>
           <span
             className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
               activeCategory === "basic-to-advance"
@@ -394,7 +313,7 @@ export const LibraryManagement: React.FC<LibraryManagementProps> = ({
           }`}
         >
           <Sparkles size={16} />
-          <span>3. ORDER FLOW PRO ($99 USD)</span>
+          <span>2. ORDER FLOW PRO ($99 USD)</span>
           <span
             className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
               activeCategory === "cycle-blueprint"
@@ -406,225 +325,6 @@ export const LibraryManagement: React.FC<LibraryManagementProps> = ({
           </span>
         </button>
       </div>
-
-      {/* ==================================================================== */}
-      {/* CATEGORY 1: FREE PDFS */}
-      {/* ==================================================================== */}
-      {activeCategory === "free-pdfs" && (
-        <div className="space-y-6">
-          {/* Filter Bar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl border border-slate-800 bg-[#070e1b] p-4">
-            <div className="relative w-full sm:w-80">
-              <Search size={14} className="absolute left-3 top-3 text-slate-500" />
-              <input
-                type="text"
-                placeholder="Search PDF title, category, or summary..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-xl border border-slate-800 bg-slate-900/80 py-2 pl-9 pr-3 text-xs text-white placeholder:text-slate-500 outline-none focus:border-sky-500"
-              />
-            </div>
-
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <label className="text-xs font-bold text-slate-400 shrink-0">Category:</label>
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-xs font-bold text-white outline-none focus:border-sky-500 cursor-pointer"
-              >
-                <option value="all">All Categories ({ebooks?.length || 0})</option>
-                {categories.map((c) => (
-                  <option key={String(c)} value={String(c)}>
-                    {String(c)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* PDF Items List */}
-          {filteredEbooks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-800 bg-[#070e1b]/40 p-12 text-center">
-              <BookOpen size={36} className="text-slate-600 mb-3" />
-              <h4 className="text-sm font-bold text-slate-300">No PDF eBooks Found</h4>
-              <p className="text-xs text-slate-500 mt-1 max-w-sm">
-                Add your first Google Drive PDF or strategy guide using the "Add Free PDF" button above.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {filteredEbooks.map((eb: any, idx: number) => {
-                const drivePreview = eb.fileUrl ? getGoogleDrivePreviewUrl(eb.fileUrl) : null;
-                const driveDownload = eb.fileUrl ? getGoogleDriveDownloadUrl(eb.fileUrl) : null;
-                const isDrive = eb.fileUrl && (eb.fileUrl.includes("drive.google.com") || eb.fileUrl.includes("docs.google.com"));
-
-                return (
-                  <div
-                    key={eb.id || idx}
-                    className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 rounded-2xl border border-slate-800/80 bg-[#070e1b] p-4 sm:p-5 transition hover:border-slate-700"
-                  >
-                    {/* Left: Thumbnail & Info */}
-                    <div className="flex items-start gap-3.5 min-w-0 flex-1">
-                      {/* Sequence Badge & Reorder */}
-                      <div className="flex flex-col items-center gap-1 shrink-0 pt-0.5">
-                        <span className="flex size-6 items-center justify-center rounded-lg bg-slate-800 text-[11px] font-black text-slate-300">
-                          {idx + 1}
-                        </span>
-                        <div className="flex flex-col gap-0.5">
-                          <button
-                            type="button"
-                            onClick={() => handleMoveEbook(eb.id, "up")}
-                            disabled={idx === 0}
-                            className="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-800 disabled:opacity-20 cursor-pointer"
-                            title="Move Up"
-                          >
-                            <ArrowUp size={12} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleMoveEbook(eb.id, "down")}
-                            disabled={idx === filteredEbooks.length - 1}
-                            className="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-800 disabled:opacity-20 cursor-pointer"
-                            title="Move Down"
-                          >
-                            <ArrowDown size={12} />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Cover Thumbnail */}
-                      {eb.coverImageUrl ? (
-                        <img
-                          src={eb.coverImageUrl}
-                          alt={eb.titleEn}
-                          className="size-16 rounded-xl object-cover border border-slate-800 shrink-0"
-                        />
-                      ) : (
-                        <div className="flex size-16 items-center justify-center rounded-xl bg-slate-800/60 border border-slate-700/60 text-slate-400 shrink-0">
-                          <FileText size={24} />
-                        </div>
-                      )}
-
-                      {/* Content Details */}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-md bg-sky-500/10 px-2 py-0.5 text-[10px] font-black uppercase text-sky-400 border border-sky-500/20">
-                            {eb.category || "STRATEGY GUIDE"}
-                          </span>
-                          <span className="rounded-md bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-slate-400">
-                            {eb.pages || 15} pages
-                          </span>
-                          {isDrive && (
-                            <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400 border border-emerald-500/20">
-                              Google Drive Verified
-                            </span>
-                          )}
-                          <span
-                            className={`rounded-md px-2 py-0.5 text-[10px] font-black uppercase ${
-                              eb.isPublished !== false
-                                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                                : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                            }`}
-                          >
-                            {eb.isPublished !== false ? "Published" : "Draft / Hidden"}
-                          </span>
-                        </div>
-
-                        <h4 className="mt-1.5 text-sm font-black text-white truncate">
-                          {eb.titleEn}
-                        </h4>
-                        {eb.titleBn && (
-                          <div className="text-xs text-slate-400 truncate">{eb.titleBn}</div>
-                        )}
-                        <p className="mt-1 text-xs text-slate-400 line-clamp-1">
-                          {eb.subtitleEn || eb.subtitleBn || "No description provided."}
-                        </p>
-
-                        {/* Link preview & test */}
-                        {eb.fileUrl && (
-                          <div className="mt-2 flex items-center gap-3 text-[11px]">
-                            {drivePreview ? (
-                              <a
-                                href={drivePreview}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex items-center gap-1 font-bold text-sky-400 hover:underline"
-                              >
-                                <ExternalLink size={12} />
-                                <span>Preview PDF</span>
-                              </a>
-                            ) : (
-                              <a
-                                href={eb.fileUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex items-center gap-1 font-bold text-sky-400 hover:underline"
-                              >
-                                <ExternalLink size={12} />
-                                <span>Open Direct Link</span>
-                              </a>
-                            )}
-
-                            {driveDownload && (
-                              <a
-                                href={driveDownload}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex items-center gap-1 font-bold text-emerald-400 hover:underline"
-                              >
-                                <Download size={12} />
-                                <span>Download PDF</span>
-                              </a>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Right: Actions */}
-                    <div className="flex items-center gap-2 self-end md:self-auto shrink-0 border-t md:border-t-0 border-slate-800/80 pt-2 md:pt-0 w-full md:w-auto justify-end">
-                      {/* Publish / Unpublish Toggle */}
-                      <button
-                        type="button"
-                        onClick={() => onTogglePublishEbook(eb.id, eb.isPublished !== false)}
-                        className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
-                          eb.isPublished !== false
-                            ? "border-emerald-800 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/60"
-                            : "border-slate-800 bg-slate-900 text-slate-400 hover:text-white"
-                        }`}
-                        title={eb.isPublished !== false ? "Click to Unpublish" : "Click to Publish"}
-                      >
-                        {eb.isPublished !== false ? <Eye size={13} /> : <EyeOff size={13} />}
-                        <span>{eb.isPublished !== false ? "Published" : "Draft"}</span>
-                      </button>
-
-                      {/* Edit Button */}
-                      <button
-                        type="button"
-                        onClick={() => onOpenEditEbookModal(eb)}
-                        className="flex items-center gap-1 rounded-xl border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs font-bold text-slate-300 hover:bg-slate-800 hover:text-white transition cursor-pointer"
-                      >
-                        <Edit size={13} />
-                        <span>Edit</span>
-                      </button>
-
-                      {/* Delete Button */}
-                      <button
-                        type="button"
-                        onClick={() => onDeleteEbook(eb.id)}
-                        className="flex size-8 items-center justify-center rounded-xl border border-rose-900/60 bg-rose-950/20 text-rose-400 hover:bg-rose-900 hover:text-white transition cursor-pointer"
-                        title="Delete PDF"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* ==================================================================== */}
       {/* CATEGORY 2 & 3: PAID COURSE ALBUMS */}

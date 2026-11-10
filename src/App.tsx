@@ -35,10 +35,10 @@ const tabTitles: Record<string, string> = {
   mentor: "Official 1-on-1 Mentor Control",
   "ai-report": "Cycle AI Engine & OpenRouter CMS",
   psychology: "Psychology Feed & Mindset CMS",
-  library: "Cycle University — Course & Resource Management",
+  library: "Cycle University — Course Management",
   community: "Community Feed & Discourse Moderation",
   support: "Support Messages",
-  ebooks: "Free eBooks & PDF Library CMS",
+  ebooks: "Cycle University — Course Management",
   "social-proof": "Social Proof Row Management",
   owner: "Cycle Social ID",
   settings: "Gateway & Platform Settings",
@@ -251,24 +251,8 @@ export const App: React.FC = () => {
           {activeTab === "ai-report" && <AiReportCMS />}
           {activeTab === "psychology" && <PsychologyCMS />}
           {activeTab === "community" && <CommunityModeration />}
-          {activeTab === "library" && (
-            <LibraryManagement
-              ebooks={ebooks}
-              onOpenAddEbookModal={handleOpenAddEbook}
-              onOpenEditEbookModal={handleOpenEditEbook}
-              onTogglePublishEbook={handleTogglePublishEbook}
-              onDeleteEbook={(id) => setDeleteConfirmEbookId(id)}
-              onReloadEbooks={reloadEbooks}
-            />
-          )}
-          {activeTab === "ebooks" && (
-            <EbookManagement
-              ebooks={ebooks}
-              onOpenAddModal={handleOpenAddEbook}
-              onOpenEditModal={handleOpenEditEbook}
-              onTogglePublish={handleTogglePublishEbook}
-              onDeleteEbook={(id) => setDeleteConfirmEbookId(id)}
-            />
+          {(activeTab === "library" || activeTab === "ebooks") && (
+            <LibraryManagement />
           )}
           {activeTab === "support" && <SupportMessages onReload={reloadSupport} />}
           {activeTab === "social-proof" && <SocialProofCMS />}
