@@ -81,6 +81,151 @@ function isManualRecordActive(record: any, now: Date = new Date()): boolean {
   return true;
 }
 
+function deduplicateAndMergeUsers(users: any[]): any[] {
+  if (!Array.isArray(users) || users.length === 0) return [];
+
+  const byEmail = new Map<string, any>();
+  const byId = new Map<number, any>();
+  const others: any[] = [];
+
+  for (const user of users) {
+    if (!user) continue;
+    const rawEmail = (user.email || "").trim().toLowerCase();
+    const numericId = Number(user.id);
+
+    let existing: any = undefined;
+    if (rawEmail && byEmail.has(rawEmail)) {
+      existing = byEmail.get(rawEmail);
+    } else if (numericId > 0 && byId.has(numericId)) {
+      existing = byId.get(numericId);
+    }
+
+    if (existing) {
+      // Merge records
+      const existingCreated = new Date(existing.createdAt || existing.lastSignedIn || 0).getTime();
+      const userCreated = new Date(user.createdAt || user.lastSignedIn || 0).getTime();
+      if (userCreated > 0 && (existingCreated === 0 || userCreated < existingCreated)) {
+        existing.createdAt = user.createdAt;
+      }
+
+      const existingSigned = new Date(existing.lastSignedIn || 0).getTime();
+      const userSigned = new Date(user.lastSignedIn || 0).getTime();
+      if (userSigned > existingSigned) {
+        existing.lastSignedIn = user.lastSignedIn;
+      }
+
+      if ((!existing.name || existing.name === "Trader") && user.name && user.name !== "Trader") {
+        existing.name = user.name;
+      }
+      if (!existing.avatar && user.avatar) {
+        existing.avatar = user.avatar;
+      }
+      if (!existing.username && user.username) {
+        existing.username = user.username;
+      }
+      if (user.role === "admin" || user.role === "owner") {
+        existing.role = user.role;
+      }
+      if (user.isGoogleAuth) {
+        existing.isGoogleAuth = true;
+      }
+
+      // Merge entitlements and access
+      if (user.isCourseOn || user.isBasicToAdvanceOn) {
+        existing.isCourseOn = true;
+        existing.isBasicToAdvanceOn = true;
+        if (existing.basicToAdvanceAccess) existing.basicToAdvanceAccess.status = "on";
+        if (existing.courseAccess) existing.courseAccess.status = "on";
+      }
+      if (user.isCycleBullPrintOn) {
+        existing.isCycleBullPrintOn = true;
+        if (existing.cycleBullPrintAccess) existing.cycleBullPrintAccess.status = "on";
+      }
+      if (user.isProOn) {
+        existing.isProOn = true;
+        if (existing.proAccess) existing.proAccess.status = "on";
+        if (existing.effectivePlan === "unclaimed" || existing.effectivePlan === "free_trial") {
+          existing.effectivePlan = "pro";
+        }
+      }
+      if (user.isPremiumOn) {
+        existing.isPremiumOn = true;
+        if (existing.premiumAccess) existing.premiumAccess.status = "on";
+        existing.effectivePlan = "premium";
+      }
+
+      if (user.accountStatus === "banned" || existing.accountStatus === "banned") {
+        existing.accountStatus = "banned";
+      } else if (user.accountStatus === "suspended" || existing.accountStatus === "suspended") {
+        existing.accountStatus = "suspended";
+      }
+
+      if (numericId > 0 && (Number(existing.id) <= 0 || numericId < Number(existing.id))) {
+        existing.id = numericId;
+        existing.displayId = formatDisplayUserId(numericId);
+      }
+      if (!existing.email && rawEmail) {
+        existing.email = user.email;
+      }
+      if (rawEmail) {
+        byEmail.set(rawEmail, existing);
+      }
+      if (numericId > 0) {
+        byId.set(numericId, existing);
+      }
+    } else {
+      const cloned = { ...user };
+      if (rawEmail) {
+        byEmail.set(rawEmail, cloned);
+      }
+      if (numericId > 0) {
+        byId.set(numericId, cloned);
+      }
+      if (!rawEmail && (!numericId || numericId <= 0)) {
+        others.push(cloned);
+      }
+    }
+  }
+
+  const uniqueUsers = new Set<any>();
+  for (const u of byEmail.values()) {
+    uniqueUsers.add(u);
+  }
+  for (const u of byId.values()) {
+    uniqueUsers.add(u);
+  }
+  for (const u of others) {
+    uniqueUsers.add(u);
+  }
+
+  return Array.from(uniqueUsers);
+}
+
+function deduplicateStudents(students: Student[]): Student[] {
+  const byEmail = new Map<string, Student>();
+  const byId = new Map<number, Student>();
+  const others: Student[] = [];
+
+  for (const s of students) {
+    const rawEmail = (s.email || "").trim().toLowerCase();
+    const id = Number(s.id);
+    let existing = (rawEmail ? byEmail.get(rawEmail) : undefined) || (id ? byId.get(id) : undefined);
+    if (!existing) {
+      if (rawEmail) byEmail.set(rawEmail, s);
+      if (id) byId.set(id, s);
+      others.push(s);
+    }
+  }
+
+  const seen = new Set<string>();
+  return others.filter((s) => {
+    const k = s.email ? `email:${s.email.toLowerCase().trim()}` : `id:${s.id}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
 export class UserService extends HttpClient implements IUserService {
   constructor(
     apiBase: string = APP_CONFIG.API_BASE,
@@ -93,7 +238,7 @@ export class UserService extends HttpClient implements IUserService {
     try {
       const data = await this.get<{ success?: boolean; users?: Student[] }>("/users");
       if (data?.success && Array.isArray(data.users) && data.users.length > 0) {
-        return data.users.filter((u: any) => !isAutomatedTestUser(u));
+        return deduplicateStudents(data.users.filter((u: any) => !isAutomatedTestUser(u)));
       }
     } catch (err) {
       console.warn("[API_BASE/users unreachable, falling back to direct Supabase]:", err);
@@ -102,7 +247,7 @@ export class UserService extends HttpClient implements IUserService {
     try {
       const users = await this.supabase.fetchRaw<any[]>("users", "select=*&order=id.desc");
       if (Array.isArray(users) && users.length > 0) {
-        return users
+        const mapped = users
           .filter((u: any) => !isAutomatedTestUser(u))
           .map((u: any) => ({
             id: u.id,
@@ -115,6 +260,7 @@ export class UserService extends HttpClient implements IUserService {
             ordersCount: 0,
             totalSpent: 0,
           }));
+        return deduplicateStudents(mapped);
       }
     } catch (err) {
       console.warn("[Supabase users fallback error]:", err);
@@ -347,6 +493,8 @@ export class UserService extends HttpClient implements IUserService {
       };
     });
 
+    results = deduplicateAndMergeUsers(results);
+
     results.sort((a, b) => new Date(b.lastSignedIn || b.createdAt).getTime() - new Date(a.lastSignedIn || a.createdAt).getTime());
 
     if (filters?.search) {
@@ -400,14 +548,16 @@ export class UserService extends HttpClient implements IUserService {
       const qs = params.toString() ? `?${params.toString()}` : "";
       const data = await this.get<{ success?: boolean; users?: any[] }>(`/user-management/list${qs}`);
       if (data?.success && Array.isArray(data.users)) {
-        return data.users.filter((u: any) => !isAutomatedTestUser(u));
+        const filtered = data.users.filter((u: any) => !isAutomatedTestUser(u));
+        return deduplicateAndMergeUsers(filtered);
       }
     } catch (err) {
       console.warn("[fetchUserManagementList API_BASE error, falling back to direct Supabase]:", err);
     }
 
     try {
-      return await this.buildUserManagementListFromSupabase(filters);
+      const results = await this.buildUserManagementListFromSupabase(filters);
+      return deduplicateAndMergeUsers(results);
     } catch (supaErr) {
       console.warn("[fetchUserManagementList Supabase fallback error]:", supaErr);
       return [];
